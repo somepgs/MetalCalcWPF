@@ -1,21 +1,14 @@
-﻿using System.Text;
+﻿using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using MetalCalcWPF.Models; // Подключаем наши модели
 
 namespace MetalCalcWPF
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
+        // Создаем подключение к БД
+        private DatabaseService _db = new DatabaseService();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -25,33 +18,83 @@ namespace MetalCalcWPF
         {
             try
             {
-                // 1. Берем текст из полей и превращаем в числа
-                // Используем double, так как длина может быть 1.5 метра
-                double length = Convert.ToDouble(LengthBox.Text);
-                double thickness = Convert.ToDouble(ThicknessBox.Text);
+                // 1. Считываем и защищаемся от точек/запятых
+                double lengthMeters = Convert.ToDouble(LengthBox.Text.Replace(".", ","));
+                double thicknessMm = Convert.ToDouble(ThicknessBox.Text.Replace(".", ","));
 
-                // 2. Простая логика цены (потом усложним)
-                // Допустим, 1 метр реза стоит 200 тенге * толщину
-                double pricePerMeter = 200 * thickness;
+                // 2. Ищем профиль
+                MaterialProfile profile = _db.GetProfileByThickness(thicknessMm);
+                if (profile == null) { ResultLabel.Text = "Нет данных!"; return; }
 
-                double totalCost = length * pricePerMeter;
+                WorkshopSettings settings = _db.GetSettings();
 
-                // 3. Выводим результат в текстовую метку
-                ResultLabel.Text = $"Итого: {totalCost} ₸";
+                // 3. РАСЧЕТ
+
+                // А) Время резки
+                double cuttingTimeMinutes = lengthMeters / profile.CuttingSpeed;
+                double cuttingTimeHours = cuttingTimeMinutes / 60.0;
+
+                // Б) Себестоимость часа
+                bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
+                double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
+
+                if (!isAir)
+                {
+                    // Добавляем газ (грубо: баллон на 4 часа)
+                    machineCostPerHour += settings.OxygenBottlePrice / 4.0;
+                }
+
+                // В) Чистая себестоимость резки (Время * Стоимость часа)
+                double cuttingCost = cuttingTimeHours * machineCostPerHour;
+
+                // Г) Применяем коэффициент наценки (из Excel)
+                double priceForCutting = cuttingCost * profile.MarkupCoefficient;
+
+                // Д) Пробивка + СЛОЖНОСТЬ
+                double priceForPierce = profile.PiercePrice;
+
+                // !!! НОВОЕ: Проверка на сложность (Кувалда/Кран) !!!
+                double handlingExtraCost = 0;
+
+                // Если толщина больше или равна порогу (20 мм)
+                if (thicknessMm > settings.HeavyMaterialThresholdMm)
+                {
+                    // Добавляем наценку за тяжесть (например, +500 тг)
+                    handlingExtraCost = settings.HeavyHandlingCostPerDetail;
+                }
+
+                // Финальная цена = Резка + Пробивка + Сложность
+                double finalPrice = priceForCutting + priceForPierce + handlingExtraCost;
+
+                // 4. Вывод
+                ResultLabel.Text = $"Итого: {Math.Round(finalPrice)} ₸";
+
+                // Дебаг (чтобы ты видел, добавилась ли наценка)
+                // Можно удалить потом
+                if (handlingExtraCost > 0)
+                {
+                    MessageBox.Show($"Внимание! Применена наценка за сложность (толщина > {settings.HeavyMaterialThresholdMm}мм).\n" +
+                                    $"Добавлено: {handlingExtraCost} ₸ за съем детали.");
+                }
+
+                // Дебаг для проверки (сравни с Excel!)
+                double costPerMinute = machineCostPerHour / 60.0;
+                MessageBox.Show($"Профиль: {profile.Thickness}мм ({profile.GasType})\n" +
+                                $"Цена минуты станка: {Math.Round(costPerMinute, 2)} тг (Excel=65?)\n" +
+                                $"Время: {Math.Round(cuttingTimeMinutes, 2)} мин\n" +
+                                $"Себестоимость реза: {Math.Round(cuttingCost, 2)} тг\n" +
+                                $"Цена реза (x{profile.MarkupCoefficient}): {Math.Round(priceForCutting)} тг\n" +
+                                $"Пробивка: {profile.PiercePrice} тг");
             }
-            catch
+            catch (Exception ex)
             {
-                // Если ввели буквы вместо цифр
-                ResultLabel.Text = "Ошибка! Введите числа.";
+                MessageBox.Show("Ошибка: " + ex.Message);
             }
         }
 
         private void Settings_Click(object sender, RoutedEventArgs e)
         {
-            // Создаем экземпляр окна настроек
             SettingsWindow settings = new SettingsWindow();
-
-            // Показываем его как "диалоговое" (блокирует главное окно, пока не закроешь настройки)
             settings.ShowDialog();
         }
     }
