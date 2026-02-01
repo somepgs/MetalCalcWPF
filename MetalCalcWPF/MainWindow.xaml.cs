@@ -45,5 +45,14 @@ namespace MetalCalcWPF
                 ResultLabel.Text = "Ошибка! Введите числа.";
             }
         }
+
+        private void Settings_Click(object sender, RoutedEventArgs e)
+        {
+            // Создаем экземпляр окна настроек
+            SettingsWindow settings = new SettingsWindow();
+
+            // Показываем его как "диалоговое" (блокирует главное окно, пока не закроешь настройки)
+            settings.ShowDialog();
+        }
     }
 }
