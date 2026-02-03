@@ -28,16 +28,28 @@
             </StackPanel>
         </Border>
 
-        <GroupBox Grid.Column="1" Header="История расчетов (Последние)">
-            <DataGrid x:Name="HistoryGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="№" Binding="{Binding Id}" Width="40"/>
-                    <DataGridTextColumn Header="Дата" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM HH:mm\}}" Width="100"/>
-                    <DataGridTextColumn Header="Клиент" Binding="{Binding ClientName}" Width="*"/>
-                    <DataGridTextColumn Header="Инфо" Binding="{Binding Description}" Width="120"/>
-                    <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat=\{0:N0\} ₸}" Width="80" FontWeight="Bold"/>
-                </DataGrid.Columns>
-            </DataGrid>
+        <GroupBox Grid.Column="1" Header="История расчетов" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Button Grid.Row="0" Content="📊 Скачать в Excel" HorizontalAlignment="Right" 
+                        Width="120" Height="25" Margin="0,5,5,5" 
+                        Click="ExportToExcel_Click" Background="#E0F7FA"/>
+
+                <DataGrid Grid.Row="1" x:Name="HistoryGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="№" Binding="{Binding Id}" Width="30"/>
+                        <DataGridTextColumn Header="Дата" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM HH:mm\}}" Width="90"/>
+                        <DataGridTextColumn Header="Тип" Binding="{Binding OperationType}" Width="60" FontWeight="Bold"/>
+                        <DataGridTextColumn Header="Клиент" Binding="{Binding ClientName}" Width="*"/>
+                        <DataGridTextColumn Header="Инфо" Binding="{Binding Description}" Width="100"/>
+                        <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat=\{0:N0\} ₸}" Width="70" FontWeight="Bold"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
         </GroupBox>
     </Grid>
 </Window>

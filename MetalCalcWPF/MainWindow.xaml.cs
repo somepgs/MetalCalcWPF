@@ -2,6 +2,7 @@
 using System.Windows;
 using MetalCalcWPF.Models;
 using System.Collections.Generic;
+using ClosedXML.Excel;
 
 namespace MetalCalcWPF
 {
@@ -60,7 +61,8 @@ namespace MetalCalcWPF
                     CreatedDate = DateTime.Now,
                     ClientName = clientName,
                     Description = $"{thicknessMm}мм / {lengthMeters}м",
-                    TotalPrice = Math.Round(finalPrice)
+                    TotalPrice = Math.Round(finalPrice),
+                    OperationType = "Laser" // <--- Пишем, что это Лазер
                 };
 
                 _db.SaveOrder(newOrder); // Пишем в БД
@@ -85,6 +87,73 @@ namespace MetalCalcWPF
             settings.ShowDialog();
             // После закрытия настроек пересчитывать ничего не надо,
             // но следующий расчет уже будет по новым ценам.
+        }
+
+        private void ExportToExcel_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // 1. Получаем все данные из таблицы (или из базы)
+                var history = _db.GetRecentOrders();
+
+                if (history.Count == 0)
+                {
+                    MessageBox.Show("История пуста, нечего выгружать!");
+                    return;
+                }
+
+                // 2. Спрашиваем, куда сохранить файл
+                var saveDialog = new Microsoft.Win32.SaveFileDialog();
+                saveDialog.FileName = $"Отчет_{DateTime.Now:yyyy-MM-dd}.xlsx";
+                saveDialog.Filter = "Excel Files|*.xlsx";
+
+                if (saveDialog.ShowDialog() == true)
+                {
+                    // 3. Создаем Excel файл с помощью ClosedXML
+                    using (var workbook = new XLWorkbook())
+                    {
+                        var worksheet = workbook.Worksheets.Add("Заказы");
+
+                        // Заголовки (Шапка)
+                        worksheet.Cell(1, 1).Value = "№";
+                        worksheet.Cell(1, 2).Value = "Дата";
+                        worksheet.Cell(1, 3).Value = "Тип";
+                        worksheet.Cell(1, 4).Value = "Клиент";
+                        worksheet.Cell(1, 5).Value = "Описание";
+                        worksheet.Cell(1, 6).Value = "Цена (₸)";
+
+                        // Жирный шрифт для шапки
+                        var headerRange = worksheet.Range("A1:F1");
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+                        // Заполняем данными
+                        int row = 2;
+                        foreach (var item in history)
+                        {
+                            worksheet.Cell(row, 1).Value = item.Id;
+                            worksheet.Cell(row, 2).Value = item.CreatedDate;
+                            worksheet.Cell(row, 3).Value = item.OperationType;
+                            worksheet.Cell(row, 4).Value = item.ClientName;
+                            worksheet.Cell(row, 5).Value = item.Description;
+                            worksheet.Cell(row, 6).Value = item.TotalPrice;
+                            row++;
+                        }
+
+                        // Авто-ширина колонок
+                        worksheet.Columns().AdjustToContents();
+
+                        // Сохраняем
+                        workbook.SaveAs(saveDialog.FileName);
+                    }
+
+                    MessageBox.Show("Файл успешно сохранен!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при экспорте: " + ex.Message);
+            }
         }
     }
 }
