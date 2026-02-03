@@ -20,53 +20,83 @@ namespace MetalCalcWPF
         {
             try
             {
-                // 1. Сбор данных
-                string clientName = ClientBox.Text; // Имя клиента
+                // --- 1. СБОР ОБЩИХ ДАННЫХ ---
+                string clientName = ClientBox.Text;
                 if (string.IsNullOrWhiteSpace(clientName)) clientName = "Без названия";
 
-                double lengthMeters = Convert.ToDouble(LengthBox.Text.Replace(".", ","));
                 double thicknessMm = Convert.ToDouble(ThicknessBox.Text.Replace(".", ","));
-
-                // 2. Расчет (Тот же самый, что и был)
-                MaterialProfile profile = _db.GetProfileByThickness(thicknessMm);
-                if (profile == null) { ResultLabel.Text = "Нет профиля!"; return; }
+                double quantity = GetSafeDouble(QuantityBox.Text);
+                if (quantity == 0) quantity = 1; // Защита: минимум 1 деталь
 
                 WorkshopSettings settings = _db.GetSettings();
 
-                // --- ЛОГИКА РАСЧЕТА (Кратко) ---
-                double cuttingTimeMinutes = lengthMeters / profile.CuttingSpeed;
-                double cuttingTimeHours = cuttingTimeMinutes / 60.0;
+                double totalPerDetail = 0; // Цена за ОДНУ штуку
+                string operationsLog = ""; // Строка для истории (что делали)
 
-                bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
-                double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
-                if (!isAir) machineCostPerHour += settings.OxygenBottlePrice / 4.0;
+                // --- 2. РАСЧЕТ ЛАЗЕРА (Если введена длина) ---
+                if (!string.IsNullOrWhiteSpace(LengthBox.Text) && LengthBox.Text != "0")
+                {
+                    double lengthMeters = Convert.ToDouble(LengthBox.Text.Replace(".", ","));
+                    MaterialProfile profile = _db.GetProfileByThickness(thicknessMm);
 
-                double cuttingCost = cuttingTimeHours * machineCostPerHour;
-                double priceForCutting = cuttingCost * profile.MarkupCoefficient;
-                double priceForPierce = profile.PiercePrice;
+                    if (profile != null)
+                    {
+                        // (Копируем твою логику расчета лазера сюда)
+                        double cuttingTimeHours = (lengthMeters / profile.CuttingSpeed) / 60.0;
+                        bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
+                        double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
+                        if (!isAir) machineCostPerHour += settings.OxygenBottlePrice / 4.0;
 
-                // Сложность
-                double handlingExtraCost = 0;
-                if (thicknessMm > settings.HeavyMaterialThresholdMm)
-                    handlingExtraCost = settings.HeavyHandlingCostPerDetail;
+                        double laserCost = (cuttingTimeHours * machineCostPerHour * profile.MarkupCoefficient)
+                                         + profile.PiercePrice;
 
-                double finalPrice = priceForCutting + priceForPierce + handlingExtraCost;
+                        // Сложность (Кувалда)
+                        if (thicknessMm > settings.HeavyMaterialThresholdMm)
+                            laserCost += settings.HeavyHandlingCostPerDetail;
 
-                // 3. Вывод на экран
-                ResultLabel.Text = $"Итого: {Math.Round(finalPrice)} ₸";
+                        totalPerDetail += laserCost;
+                        operationsLog += "Laser ";
+                    }
+                }
 
-                // 4. !!! СОХРАНЕНИЕ В ИСТОРИЮ !!!
+                // --- 3. РАСЧЕТ ГИБКИ ---
+                if (IsBendingEnabled.IsChecked == true)
+                {
+                    double bends = GetSafeDouble(BendsCountBox.Text);
+                    double bendingCost = bends * settings.BendingCostPerBend;
+
+                    totalPerDetail += bendingCost;
+                    operationsLog += $"+ Bend({bends}) ";
+                }
+
+                // --- 4. РАСЧЕТ СВАРКИ ---
+                if (IsWeldingEnabled.IsChecked == true)
+                {
+                    double weldCm = GetSafeDouble(WeldLengthBox.Text);
+                    double weldCost = weldCm * settings.WeldingCostPerCm;
+
+                    totalPerDetail += weldCost;
+                    operationsLog += $"+ Weld({weldCm}cm) ";
+                }
+
+                // --- 5. ИТОГ ---
+                double finalTotal = totalPerDetail * quantity; // Умножаем на партию
+
+                ResultLabel.Text = $"Итого: {Math.Round(finalTotal)} ₸";
+                ResultDetails.Text = $"{quantity} шт по {Math.Round(totalPerDetail)} ₸\n({operationsLog})";
+
+                // --- 6. СОХРАНЕНИЕ ---
                 var newOrder = new OrderHistory
                 {
                     CreatedDate = DateTime.Now,
                     ClientName = clientName,
-                    Description = $"{thicknessMm}мм / {lengthMeters}м",
-                    TotalPrice = Math.Round(finalPrice),
-                    OperationType = "Laser" // <--- Пишем, что это Лазер
+                    Description = $"{quantity}шт / {thicknessMm}мм",
+                    TotalPrice = Math.Round(finalTotal),
+                    OperationType = operationsLog // Записываем состав работ (Лазер + Гибка...)
                 };
 
-                _db.SaveOrder(newOrder); // Пишем в БД
-                UpdateHistory();         // Обновляем таблицу справа мгновенно
+                _db.SaveOrder(newOrder);
+                UpdateHistory();
             }
             catch (Exception ex)
             {
@@ -154,6 +184,23 @@ namespace MetalCalcWPF
             {
                 MessageBox.Show("Ошибка при экспорте: " + ex.Message);
             }
+        }
+
+        // Вспомогательный метод: Безопасное превращение текста в число
+        private double GetSafeDouble(string text)
+        {
+            // Если пусто или пробелы - возвращаем 0
+            if (string.IsNullOrWhiteSpace(text)) return 0;
+
+            // Пробуем превратить (учитываем и точку, и запятую)
+            text = text.Replace(".", ",");
+            if (double.TryParse(text, out double result))
+            {
+                return result;
+            }
+
+            // Если ввели буквы "abc" - возвращаем 0
+            return 0;
         }
     }
 }

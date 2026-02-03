@@ -9,6 +9,9 @@ namespace MetalCalcWPF.Models
 
         // --- 1. Экономика и Зарплата ---
         public double ElectricityPricePerKw { get; set; } = 25;
+        // --- НОВЫЕ ТАРИФЫ (Гибка и Сварка) ---
+        public double BendingCostPerBend { get; set; } = 50; // Цена за 1 гиб
+        public double WeldingCostPerCm { get; set; } = 20;   // Цена за 1 см шва
 
         // Новые поля для зарплаты
         public double OperatorMonthlySalary { get; set; } = 300000; // Оклад (тг)

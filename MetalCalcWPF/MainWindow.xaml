@@ -10,22 +10,62 @@
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,10,0">
-            <StackPanel>
-                <Button Content="⚙ Настройки" HorizontalAlignment="Right" Click="Settings_Click" Margin="0,0,0,15"/>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <TextBlock Text="Название заказа / Клиент:" FontWeight="Bold"/>
-                <TextBox x:Name="ClientBox" Height="25" Margin="0,5,0,15" Text="Новый заказ"/>
+                <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                    <Button Content="⚙ Настройки" HorizontalAlignment="Right" Click="Settings_Click" Margin="0,0,0,10" Padding="5,2"/>
 
-                <TextBlock Text="Длина контура (метров):"/>
-                <TextBox x:Name="LengthBox" Height="25" Margin="0,5,0,15"/>
+                    <TextBlock Text="Клиент / Название заказа:" FontWeight="Bold"/>
+                    <TextBox x:Name="ClientBox" Height="25" Margin="0,5,0,10"/>
 
-                <TextBlock Text="Толщина металла (мм):"/>
-                <TextBox x:Name="ThicknessBox" Height="25" Margin="0,5,0,15"/>
+                    <TextBlock Text="Толщина металла (мм):" FontWeight="Bold"/>
+                    <TextBox x:Name="ThicknessBox" Height="25" Margin="0,5,0,10"/>
 
-                <Button Content="Рассчитать и Сохранить" Height="40" Click="Button_Click" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock Text="Количество деталей (шт):" FontWeight="Bold"/>
+                    <TextBox x:Name="QuantityBox" Height="25" Margin="0,5,0,5" Text="1"/>
+                </StackPanel>
 
-                <TextBlock x:Name="ResultLabel" Text="Итого: 0 ₸" FontSize="24" FontWeight="Bold" Margin="0,20,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
-            </StackPanel>
+                <TabControl Grid.Row="1" Margin="0,0,0,10">
+
+                    <TabItem Header="🔥 Лазер">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Длина контура (метров):"/>
+                            <TextBox x:Name="LengthBox" Height="25" Margin="0,5,0,10"/>
+                            <TextBlock Text="Введите длину реза одной детали" FontSize="10" Foreground="Gray"/>
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="📐 Гибка">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Количество гибов (на 1 деталь):"/>
+                            <TextBox x:Name="BendsCountBox" Height="25" Margin="0,5,0,10" Text="0"/>
+
+                            <CheckBox x:Name="IsBendingEnabled" Content="Учитывать гибку в расчете" IsChecked="False" FontWeight="Bold"/>
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="🏗️ Сварка">
+                        <StackPanel Margin="10">
+                            <TextBlock Text="Длина шва (см):"/>
+                            <TextBox x:Name="WeldLengthBox" Height="25" Margin="0,5,0,10" Text="0"/>
+
+                            <CheckBox x:Name="IsWeldingEnabled" Content="Учитывать сварку" IsChecked="False" FontWeight="Bold"/>
+                        </StackPanel>
+                    </TabItem>
+
+                </TabControl>
+
+                <StackPanel Grid.Row="2">
+                    <Button Content="Рассчитать всё" Height="45" Click="Button_Click" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock x:Name="ResultLabel" Text="Итого: 0 ₸" FontSize="26" FontWeight="Bold" Margin="0,15,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="ResultDetails" Text="" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <GroupBox Grid.Column="1" Header="История расчетов" Margin="0,0,0,10">
