@@ -16,6 +16,7 @@ namespace MetalCalcWPF
                 // Создаем таблицы
                 db.CreateTable<WorkshopSettings>();
                 db.CreateTable<MaterialProfile>();
+                db.CreateTable<OrderHistory>();
 
                 // --- АВТО-ЗАПОЛНЕНИЕ ---
                 // Если таблица профилей пустая, заполняем её данными из твоего Excel
@@ -92,5 +93,26 @@ namespace MetalCalcWPF
                          .FirstOrDefault();
             }
         }
+
+        public void SaveOrder(OrderHistory order)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Insert(order);
+            }
+        }
+
+        public System.Collections.Generic.List<OrderHistory> GetRecentOrders()
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                // Берем таблицу, сортируем по Дате (сначала новые), берем 50 штук
+                return db.Table<OrderHistory>()
+                         .OrderByDescending(o => o.CreatedDate)
+                         .Take(50)
+                         .ToList();
+            }
+        }
+
     }
 }
