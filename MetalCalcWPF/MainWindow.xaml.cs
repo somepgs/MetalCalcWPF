@@ -24,7 +24,7 @@ namespace MetalCalcWPF
                 string clientName = ClientBox.Text;
                 if (string.IsNullOrWhiteSpace(clientName)) clientName = "Без названия";
 
-                double thicknessMm = Convert.ToDouble(ThicknessBox.Text.Replace(".", ","));
+                double thicknessMm = GetSafeDouble(QuantityBox.Text);
                 double quantity = GetSafeDouble(QuantityBox.Text);
                 if (quantity == 0) quantity = 1; // Защита: минимум 1 деталь
 
@@ -63,10 +63,45 @@ namespace MetalCalcWPF
                 if (IsBendingEnabled.IsChecked == true)
                 {
                     double bends = GetSafeDouble(BendsCountBox.Text);
-                    double bendingCost = bends * settings.BendingCostPerBend;
 
-                    totalPerDetail += bendingCost;
-                    operationsLog += $"+ Bend({bends}) ";
+                    // 1. Ищем профиль гибки для этой толщины
+                    BendingProfile bendProfile = _db.GetBendingProfile(thicknessMm);
+
+                    double bendPrice = 0;
+
+                    if (bendProfile != null)
+                    {
+                        // Считаем: (Цена * Гибы)
+                        bendPrice = bends * bendProfile.PricePerBend;
+
+                        // Добавляем наладку (ОДИН РАЗ на всю партию, поэтому делим на кол-во)
+                        // Например: Наладка 1000 тг. Деталей 10. +100 тг к каждой детали.
+                        double setupCostPerDetail = settings.BendingSetupPrice / quantity;
+                        bendPrice += setupCostPerDetail;
+
+                        // Выводим инфо о матрице
+                        BendInfoLabel.Text = $"Матрица: V{bendProfile.V_Die}\n" +
+                                             $"Мин. полка: {bendProfile.MinFlange} мм\n" +
+                                             $"Цена гиба: {bendProfile.PricePerBend} ₸";
+
+                        // ПРОВЕРКА ТЕХНОЛОГИИ (Предупреждение)
+                        // Если юзер ввел "0" гибов, но галочка стоит - не страшно.
+                        // А вот если конструктор заложит полку меньше минимума - это беда.
+                        // (Пока мы не знаем длину полки из интерфейса, но выводим инфо оператору)
+                    }
+                    else
+                    {
+                        // Если толщина 40мм и нет матрицы - считаем по базовой цене
+                        bendPrice = bends * settings.BendingBasePrice;
+                        BendInfoLabel.Text = "Нет профиля! Расчет по базовой ставке.";
+                    }
+
+                    totalPerDetail += bendPrice;
+                    operationsLog += $"+ Bend({bends}x{bendProfile?.V_Die}) ";
+                }
+                else
+                {
+                    BendInfoLabel.Text = "Расчет выключен";
                 }
 
                 // --- 4. РАСЧЕТ СВАРКИ ---

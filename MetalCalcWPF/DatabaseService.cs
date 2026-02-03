@@ -17,6 +17,7 @@ namespace MetalCalcWPF
                 db.CreateTable<WorkshopSettings>();
                 db.CreateTable<MaterialProfile>();
                 db.CreateTable<OrderHistory>();
+                db.CreateTable<BendingProfile>();
 
                 // --- АВТО-ЗАПОЛНЕНИЕ ---
                 // Если таблица профилей пустая, заполняем её данными из твоего Excel
@@ -51,6 +52,41 @@ namespace MetalCalcWPF
                     };
 
                     db.InsertAll(list);
+                }
+
+                if (db.Table<BendingProfile>().Count() == 0)
+                {
+                    var bendList = new System.Collections.Generic.List<BendingProfile>
+                    {
+                        // Тонкий металл (0.5 - 2 мм) -> Матрица V15 (так как меньше у тебя нет)
+                        // По таблице для 2мм нужно V12-V16. V15 подходит идеально.
+                        new BendingProfile { Thickness = 0.5, V_Die = 15, MinFlange = 10, PricePerBend = 50 },
+                        new BendingProfile { Thickness = 1.0, V_Die = 15, MinFlange = 10, PricePerBend = 50 },
+                        new BendingProfile { Thickness = 1.5, V_Die = 15, MinFlange = 10, PricePerBend = 60 },
+                        new BendingProfile { Thickness = 2.0, V_Die = 15, MinFlange = 11, PricePerBend = 70 }, // b=10.5 округлим
+
+                        // 3 мм -> Таблица просит V24. У тебя ЕСТЬ V24!
+                        new BendingProfile { Thickness = 3.0, V_Die = 24, MinFlange = 17, PricePerBend = 90 },
+
+                        // 4 мм -> Таблица просит V32. У тебя ЕСТЬ V32!
+                        new BendingProfile { Thickness = 4.0, V_Die = 32, MinFlange = 22, PricePerBend = 120 },
+
+                        // 5-6 мм -> Таблица просит V40-V50. 
+                        // Для 5 мм берем V40.
+                        new BendingProfile { Thickness = 5.0, V_Die = 40, MinFlange = 28, PricePerBend = 150 },
+                        // Для 6 мм берем V60 (так как V40 маловата, нужно 8*S = 48).
+                        new BendingProfile { Thickness = 6.0, V_Die = 60, MinFlange = 42, PricePerBend = 200 },
+
+                        // 8-10 мм -> Таблица просит V60-V80.
+                        new BendingProfile { Thickness = 8.0, V_Die = 60, MinFlange = 45, PricePerBend = 300 }, // Или V80
+                        new BendingProfile { Thickness = 10.0, V_Die = 80, MinFlange = 55, PricePerBend = 500 },
+
+                        // Толстые (12-16 мм) -> Матрица V120
+                        new BendingProfile { Thickness = 12.0, V_Die = 120, MinFlange = 85, PricePerBend = 800 },
+                        new BendingProfile { Thickness = 14.0, V_Die = 120, MinFlange = 90, PricePerBend = 1000 },
+                        new BendingProfile { Thickness = 16.0, V_Die = 120, MinFlange = 100, PricePerBend = 1200 },
+                    };
+                    db.InsertAll(bendList);
                 }
             }
         }
@@ -94,6 +130,19 @@ namespace MetalCalcWPF
             }
         }
 
+        // Метод поиска профиля гибки
+        public BendingProfile GetBendingProfile(double thickness)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                // Ищем точное совпадение или ближайшую большую матрицу
+                return db.Table<BendingProfile>()
+                         .Where(p => p.Thickness >= thickness)
+                         .OrderBy(p => p.Thickness)
+                         .FirstOrDefault();
+            }
+        }
+
         public void SaveOrder(OrderHistory order)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -113,6 +162,5 @@ namespace MetalCalcWPF
                          .ToList();
             }
         }
-
     }
 }

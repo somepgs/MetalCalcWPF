@@ -45,7 +45,14 @@
                             <TextBlock Text="Количество гибов (на 1 деталь):"/>
                             <TextBox x:Name="BendsCountBox" Height="25" Margin="0,5,0,10" Text="0"/>
 
-                            <CheckBox x:Name="IsBendingEnabled" Content="Учитывать гибку в расчете" IsChecked="False" FontWeight="Bold"/>
+                            <CheckBox x:Name="IsBendingEnabled" Content="Учитывать гибку в расчете" IsChecked="False" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5" Background="#F0F0F0">
+                                <StackPanel>
+                                    <TextBlock Text="Техническая информация:" FontWeight="Bold" FontSize="10"/>
+                                    <TextBlock x:Name="BendInfoLabel" Text="Выберите толщину..." FontSize="11" Foreground="Blue"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </TabItem>
 
