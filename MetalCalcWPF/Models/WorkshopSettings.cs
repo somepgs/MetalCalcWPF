@@ -7,60 +7,64 @@ namespace MetalCalcWPF.Models
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
-        // --- 1. Экономика и Зарплата ---
+        // --- 1. ОБЩИЕ и ЛАЗЕР ---
         public double ElectricityPricePerKw { get; set; } = 25;
 
-        // --- НОВЫЕ ТАРИФЫ (Гибка и Сварка) ---
-        // --- ГИБКА ---
-        // Это базовая цена, если профиль не найден (резерв)
-        public double BendingBasePrice { get; set; } = 50;
+        // Оператор ЛАЗЕРА
+        public double OperatorMonthlySalary { get; set; } = 300000;
+        public int WorkDaysPerMonth { get; set; } = 26;
+        public int WorkHoursPerDay { get; set; } = 8;
 
-        // Цена за НАЛАДКУ (Смену инструмента) на партию
-        // Например: 2000 тг берем с клиента просто за то, что подошли к станку
-        public double BendingSetupPrice { get; set; } = 1000;
-        public double WeldingCostPerCm { get; set; } = 20;   // Цена за 1 см шва
-
-        // Новые поля для зарплаты
-        public double OperatorMonthlySalary { get; set; } = 300000; // Оклад (тг)
-        public int WorkDaysPerMonth { get; set; } = 26;             // График 6/1 (~26 дней)
-        public int WorkHoursPerDay { get; set; } = 8;               // Смена 8 часов
-
-        // --- 2. Расходники ---
         public double OxygenBottlePrice { get; set; } = 3000;
         public double AmortizationPerHour { get; set; } = 650;
 
-        // --- 3. Сложность (Кувалда и Кран-балка) ---
-        // Начиная с какой толщины считаем деталь "Тяжелой"?
-        public double HeavyMaterialThresholdMm { get; set; } = 20.0; // Было 10, ставим 20
-
-        // Сколько добавляем к стоимости за сложность (в тенге за деталь)?
-        // Это плата за то, что оператор машет кувалдой и краном
+        // Сложность (Кувалда)
+        public double HeavyMaterialThresholdMm { get; set; } = 20.0;
         public double HeavyHandlingCostPerDetail { get; set; } = 500;
 
-        // --- 4. Оборудование (50 кВт) ---
+        // Мощность Лазера
         public double LaserBasePowerConsumption { get; set; } = 28.0;
         public double CompressorIdlePower { get; set; } = 5.0;
         public double CompressorActivePower { get; set; } = 22.0;
 
-        // --- УМНЫЙ РАСЧЕТ СТОИМОСТИ ЧАСА ---
+        // --- 2. ЛИСТОГИБ (Bodor 600T) ---
+        public double BendingOperatorSalary { get; set; } = 450000;
+        public double BendingMachinePower { get; set; } = 45.0;
+        public double MaxBendingLengthMm { get; set; } = 6000;
+
+        public double BendingSetupPrice { get; set; } = 1000; // Резерв
+        public double BendingBasePrice { get; set; } = 50;    // Резерв
+
+        // --- 3. СВАРКА (Вот это поле пропало, я его вернул!) ---
+        public double WeldingCostPerCm { get; set; } = 20;
+
+
+        // --- МЕТОДЫ РАСЧЕТА ---
+
+        // Стоимость часа ЛАЗЕРА
         public double GetHourlyBaseCost(bool isAirCutting)
         {
-            // 1. Считаем реальную ставку в час: Оклад / (Дни * Часы)
-            double totalHoursInMonth = WorkDaysPerMonth * WorkHoursPerDay;
-            // Защита от деления на ноль
-            if (totalHoursInMonth == 0) totalHoursInMonth = 1;
+            double totalHours = WorkDaysPerMonth * WorkHoursPerDay;
+            if (totalHours == 0) totalHours = 1;
+            double salaryPerHour = OperatorMonthlySalary / totalHours;
 
-            double realHourlySalary = OperatorMonthlySalary / totalHoursInMonth;
+            double totalPower = isAirCutting
+                ? (LaserBasePowerConsumption + CompressorActivePower)
+                : (LaserBasePowerConsumption + CompressorIdlePower);
 
-            // 2. Считаем потребление тока
-            double totalPower;
-            if (isAirCutting)
-                totalPower = LaserBasePowerConsumption + CompressorActivePower;
-            else
-                totalPower = LaserBasePowerConsumption + CompressorIdlePower;
+            return salaryPerHour + (totalPower * ElectricityPricePerKw) + AmortizationPerHour;
+        }
 
-            // Итого: ЗП + Свет + Амортизация
-            return realHourlySalary + (totalPower * ElectricityPricePerKw) + AmortizationPerHour;
+        // Стоимость часа ЛИСТОГИБА
+        public double GetBendingHourlyCost()
+        {
+            double totalHours = WorkDaysPerMonth * WorkHoursPerDay;
+            if (totalHours == 0) totalHours = 1;
+
+            double salaryPerHour = BendingOperatorSalary / totalHours;
+            double powerCost = BendingMachinePower * ElectricityPricePerKw;
+
+            return salaryPerHour + powerCost + AmortizationPerHour;
         }
     }
 }

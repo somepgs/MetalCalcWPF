@@ -42,10 +42,14 @@
 
                     <TabItem Header="📐 Гибка">
                         <StackPanel Margin="10">
+                            <CheckBox x:Name="IsBendingEnabled" Content="Учитывать гибку в расчете" IsChecked="False" FontWeight="Bold" Margin="0,0,0,10"/>
+
                             <TextBlock Text="Количество гибов (на 1 деталь):"/>
                             <TextBox x:Name="BendsCountBox" Height="25" Margin="0,5,0,10" Text="0"/>
 
-                            <CheckBox x:Name="IsBendingEnabled" Content="Учитывать гибку в расчете" IsChecked="False" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Длина линии гиба (мм):"/>
+                            <TextBox x:Name="BendLengthBox" Height="25" Margin="0,5,0,10" Text="0"/>
+                            <TextBlock Text="Влияет на стоимость (до 1.5м / до 3м / до 6м)" FontSize="10" Foreground="Gray" Margin="0,-5,0,10"/>
 
                             <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5" Background="#F0F0F0">
                                 <StackPanel>
@@ -87,6 +91,11 @@
                         Click="ExportToExcel_Click" Background="#E0F7FA"/>
 
                 <DataGrid Grid.Row="1" x:Name="HistoryGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="🗑 Удалить строку" Click="DeleteOrder_Click"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="№" Binding="{Binding Id}" Width="30"/>
                         <DataGridTextColumn Header="Дата" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM HH:mm\}}" Width="90"/>
