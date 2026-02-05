@@ -17,45 +17,54 @@ namespace MetalCalcWPF
 
         private void LoadSettings()
         {
-            // 1. Достаем настройки из базы
             _currentSettings = _db.GetSettings();
 
-            // 2. Раскидываем их по полям
+            // Экономика
             SalaryBox.Text = _currentSettings.OperatorMonthlySalary.ToString();
             DaysBox.Text = _currentSettings.WorkDaysPerMonth.ToString();
             HoursBox.Text = _currentSettings.WorkHoursPerDay.ToString();
 
-            ThresholdBox.Text = _currentSettings.HeavyMaterialThresholdMm.ToString();
-            HeavyCostBox.Text = _currentSettings.HeavyHandlingCostPerDetail.ToString();
+            BendSalaryBox.Text = _currentSettings.BendingOperatorSalary.ToString(); // ЗП Гибочника
 
             ElectricityBox.Text = _currentSettings.ElectricityPricePerKw.ToString();
             AmortizationBox.Text = _currentSettings.AmortizationPerHour.ToString();
+
+            // Материалы
+            MaterialMarkupBox.Text = _currentSettings.MaterialMarkupPercent.ToString();
+
+            // Технология
+            ThresholdBox.Text = _currentSettings.HeavyMaterialThresholdMm.ToString();
+            HeavyCostBox.Text = _currentSettings.HeavyHandlingCostPerDetail.ToString();
+            WeldCostBox.Text = _currentSettings.WeldingCostPerCm.ToString();
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // 3. Собираем данные из полей обратно в объект
+                // Собираем обратно
                 _currentSettings.OperatorMonthlySalary = Convert.ToDouble(SalaryBox.Text);
                 _currentSettings.WorkDaysPerMonth = Convert.ToInt32(DaysBox.Text);
                 _currentSettings.WorkHoursPerDay = Convert.ToInt32(HoursBox.Text);
 
-                _currentSettings.HeavyMaterialThresholdMm = Convert.ToDouble(ThresholdBox.Text);
-                _currentSettings.HeavyHandlingCostPerDetail = Convert.ToDouble(HeavyCostBox.Text);
+                _currentSettings.BendingOperatorSalary = Convert.ToDouble(BendSalaryBox.Text);
 
                 _currentSettings.ElectricityPricePerKw = Convert.ToDouble(ElectricityBox.Text);
                 _currentSettings.AmortizationPerHour = Convert.ToDouble(AmortizationBox.Text);
 
-                // 4. Сохраняем в базу
-                _db.SaveSettings(_currentSettings);
+                _currentSettings.MaterialMarkupPercent = Convert.ToDouble(MaterialMarkupBox.Text);
 
-                MessageBox.Show("Настройки успешно сохранены!");
+                _currentSettings.HeavyMaterialThresholdMm = Convert.ToDouble(ThresholdBox.Text);
+                _currentSettings.HeavyHandlingCostPerDetail = Convert.ToDouble(HeavyCostBox.Text);
+                _currentSettings.WeldingCostPerCm = Convert.ToDouble(WeldCostBox.Text);
+
+                _db.SaveSettings(_currentSettings);
+                MessageBox.Show("Настройки сохранены!");
                 this.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при сохранении! Проверьте, что везде введены числа.\n" + ex.Message);
+                MessageBox.Show("Ошибка сохранения (проверьте числа): " + ex.Message);
             }
         }
     }

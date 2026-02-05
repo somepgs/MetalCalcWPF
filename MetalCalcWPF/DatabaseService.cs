@@ -7,11 +7,24 @@ namespace MetalCalcWPF
 {
     public class DatabaseService
     {
-        // Путь к файлу базы данных. Он будет лежать рядом с .exe файлом
-        private readonly string _dbPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "workshop.db");
+        // Путь: C:\Users\User\Documents\MetalCalc\workshop.db
+        private readonly string _dbPath;
 
         public DatabaseService()
         {
+            // 1. Получаем путь к "Мои Документы"
+            string docFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string appFolder = Path.Combine(docFolder, "MetalCalc");
+
+            // 2. Если папки нет - создаем
+            if (!Directory.Exists(appFolder))
+            {
+                Directory.CreateDirectory(appFolder);
+            }
+
+            // 3. Полный путь к файлу
+            _dbPath = Path.Combine(appFolder, "workshop.db");
+
             using (var db = new SQLiteConnection(_dbPath))
             {
                 // Создаем таблицы

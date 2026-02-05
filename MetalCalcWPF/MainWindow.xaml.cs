@@ -3,17 +3,20 @@ using System.Windows;
 using MetalCalcWPF.Models;
 using System.Collections.Generic;
 using ClosedXML.Excel;
+using MetalCalcWPF.Services;
 
 namespace MetalCalcWPF
 {
     public partial class MainWindow : Window
     {
         private DatabaseService _db = new DatabaseService();
+        private CalculationService _calculator;
 
         public MainWindow()
         {
             InitializeComponent();
             UpdateHistory();
+            _calculator = new CalculationService(_db);
 
             // Загружаем материалы в выпадающий список
             MaterialCombo.ItemsSource = _db.GetMaterials();
@@ -24,179 +27,58 @@ namespace MetalCalcWPF
         {
             try
             {
-                // --- 1. СБОР ОБЩИХ ДАННЫХ ---
-                string clientName = ClientBox.Text;
-                if (string.IsNullOrWhiteSpace(clientName)) clientName = "Без названия";
+                // 1. Считываем данные из полей (это всё, что делает UI)
+                string clientName = string.IsNullOrWhiteSpace(ClientBox.Text) ? "Без названия" : ClientBox.Text;
 
-                // !!! ИСПРАВЛЕНИЕ: Раньше тут стояло QuantityBox.Text !!!
-                // Теперь мы правильно берем толщину из поля Толщины
                 double thicknessMm = GetSafeDouble(ThicknessBox.Text);
+                int quantity = (int)GetSafeDouble(QuantityBox.Text);
+                if (quantity == 0) quantity = 1;
 
-                double quantity = GetSafeDouble(QuantityBox.Text);
-                if (quantity == 0) quantity = 1; // Защита: минимум 1 деталь
-
-                WorkshopSettings settings = _db.GetSettings();
-
-                double totalPerDetail = 0; // Цена за ОДНУ штуку
-                string operationsLog = ""; // Строка для истории (что делали)
-
-                // --- 0. РАСЧЕТ МЕТАЛЛА ---
-                // Считываем габариты
                 double widthMm = GetSafeDouble(WidthBox.Text);
                 double heightMm = GetSafeDouble(HeightBox.Text);
+                var selectedMaterial = MaterialCombo.SelectedItem as MaterialType;
 
-                if (widthMm > 0 && heightMm > 0)
-                {
-                    // Получаем выбранный материал
-                    var selectedMaterial = MaterialCombo.SelectedItem as MaterialType;
-                    if (selectedMaterial != null)
-                    {
-                        // 1. Считаем ВЕС (кг) = Длина(м) * Ширина(м) * Толщина(мм) * Плотность
-                        // Формула: (мм * мм * мм * г/см3) / 1 000 000 = кг
-                        double weightKg = (widthMm * heightMm * thicknessMm * selectedMaterial.Density) / 1000000.0;
+                double laserLen = GetSafeDouble(LengthBox.Text); // В метрах
 
-                        // 2. ОПРЕДЕЛЯЕМ ЦЕНУ ЗАКУПА (Твои условия)
-                        double costPricePerKg = selectedMaterial.BasePricePerKg;
+                bool useBend = IsBendingEnabled.IsChecked == true;
+                int bendsCount = (int)GetSafeDouble(BendsCountBox.Text);
+                double bendLenMm = GetSafeDouble(BendLengthBox.Text);
 
-                        // Если это Черная сталь (Ст3) - применяем твою сетку цен
-                        if (selectedMaterial.Name.Contains("Ст3"))
-                        {
-                            if (thicknessMm <= 12) costPricePerKg = 355;
-                            else if (thicknessMm <= 25) costPricePerKg = 375;
-                            else costPricePerKg = 385; // для 30-40 мм
-                        }
+                bool useWeld = IsWeldingEnabled.IsChecked == true;
+                double weldCm = GetSafeDouble(WeldLengthBox.Text);
 
-                        // 3. ДОБАВЛЯЕМ НАЦЕНКУ (из настроек, например 30%)
-                        double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
 
-                        // 4. СТОИМОСТЬ МЕТАЛЛА
-                        double materialCost = weightKg * sellPricePerKg;
+                // 2. ВЫЗЫВАЕМ СЕРВИС (Вся математика там)
+                var result = _calculator.CalculateOrder(
+                    widthMm, heightMm, thicknessMm, quantity, selectedMaterial,
+                    laserLen,
+                    useBend, bendsCount, bendLenMm,
+                    useWeld, weldCm
+                );
 
-                        totalPerDetail += materialCost;
 
-                        // Добавляем в лог инфо о металле
-                        operationsLog += $"Metal({Math.Round(weightKg, 2)}kg) ";
+                // 3. Вывод на экран
+                ResultLabel.Text = $"Итого: {Math.Round(result.TotalPrice)} ₸";
 
-                        // Можно вывести инфо куда-то, но пока просто прибавим к сумме
-                    }
-                }
+                // !!! НОВОЕ: Показываем из чего состоит цена (Поможет понять влияние зарплаты)
+                ResultDetails.Text = $"Металл: {Math.Round(result.MaterialCost)} ₸\n" +
+                                     $"Лазер: {Math.Round(result.LaserCost)} ₸\n" +
+                                     $"Гибка: {Math.Round(result.BendingCost)} ₸\n" +
+                                     $"Сварка: {Math.Round(result.WeldingCost)} ₸";
 
-                // --- 2. РАСЧЕТ ЛАЗЕРА (Если введена длина) ---
-                if (!string.IsNullOrWhiteSpace(LengthBox.Text) && LengthBox.Text != "0")
-                {
-                    double lengthMeters = Convert.ToDouble(LengthBox.Text.Replace(".", ","));
-                    MaterialProfile profile = _db.GetProfileByThickness(thicknessMm);
-
-                    if (profile != null)
-                    {
-                        double cuttingTimeHours = (lengthMeters / profile.CuttingSpeed) / 60.0;
-                        bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
-                        double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
-                        if (!isAir) machineCostPerHour += settings.OxygenBottlePrice / 4.0;
-
-                        double laserCost = (cuttingTimeHours * machineCostPerHour * profile.MarkupCoefficient)
-                                         + profile.PiercePrice;
-
-                        // Сложность (Кувалда)
-                        if (thicknessMm > settings.HeavyMaterialThresholdMm)
-                            laserCost += settings.HeavyHandlingCostPerDetail;
-
-                        totalPerDetail += laserCost;
-                        operationsLog += "Laser ";
-                    }
-                }
-
-                // --- 3. РАСЧЕТ ГИБКИ ---
-                if (IsBendingEnabled.IsChecked == true)
-                {
-                    double bends = GetSafeDouble(BendsCountBox.Text);
-                    double bendLength = GetSafeDouble(BendLengthBox.Text); // Считываем длину гиба
-
-                    // 1. Ищем профиль
-                    BendingProfile bendProfile = _db.GetBendingProfile(thicknessMm);
-
-                    double pricePerOneBend = 0;
-                    double setupPriceTotal = 0;
-
-                    if (bendProfile != null)
-                    {
-                        // 2. ВЫБИРАЕМ ЦЕНУ ПО ДЛИНЕ (Логика из Excel)
-                        if (bendLength <= 1500)
-                        {
-                            pricePerOneBend = bendProfile.PriceLen1500;
-                        }
-                        else if (bendLength <= 3000)
-                        {
-                            pricePerOneBend = bendProfile.PriceLen3000;
-                        }
-                        else
-                        {
-                            pricePerOneBend = bendProfile.PriceLen6000;
-                            // Проверка на предел станка
-                            if (bendLength > 6050) MessageBox.Show("Внимание! Длина гиба больше длины станка (6м)!");
-                        }
-
-                        // 3. Считаем стоимость гибов
-                        double bendCost = bends * pricePerOneBend;
-
-                        // 4. Добавляем наладку (делим на всю партию)
-                        setupPriceTotal = bendProfile.SetupPrice;
-                        double setupPerDetail = setupPriceTotal / quantity;
-
-                        double totalBendingCost = bendCost + setupPerDetail;
-
-                        // Вывод инфо
-                        BendInfoLabel.Text = $"Матрица: V{bendProfile.V_Die} (Мин.полка {bendProfile.MinFlange})\n" +
-                                             $"Цена гиба: {pricePerOneBend} ₸ (за длину {bendLength} мм)\n" +
-                                             $"Наладка: {bendProfile.SetupPrice} ₸ (на партию)";
-
-                        totalPerDetail += totalBendingCost;
-                        operationsLog += $"+ Bend({bends}x{bendLength}mm) ";
-                    }
-                    else
-                    {
-                        // Если профиля нет (например, 40мм) - берем базу
-                        totalPerDetail += bends * settings.BendingBasePrice;
-                        BendInfoLabel.Text = "Нет профиля! Базовая цена.";
-                    }
-                }
-
-                // --- 4. РАСЧЕТ СВАРКИ ---
-                if (IsWeldingEnabled.IsChecked == true)
-                {
-                    double weldCm = GetSafeDouble(WeldLengthBox.Text);
-                    double weldCost = weldCm * settings.WeldingCostPerCm;
-
-                    totalPerDetail += weldCost;
-                    operationsLog += $"+ Weld({weldCm}cm) ";
-                }
-
-                // --- 5. ИТОГ ---
-                double finalTotal = totalPerDetail * quantity; // Умножаем на партию
-
-                ResultLabel.Text = $"Итого: {Math.Round(finalTotal)} ₸";
-                ResultDetails.Text = $"{quantity} шт по {Math.Round(totalPerDetail)} ₸\n({operationsLog})";
-
-                // --- 6. СОХРАНЕНИЕ ---
-                // !!! ИСПРАВЛЕНИЕ: Если сумма 0, не сохраняем в базу !!!
-                if (finalTotal > 0)
+                // 4. Сохранение
+                if (result.TotalPrice > 0)
                 {
                     var newOrder = new OrderHistory
                     {
                         CreatedDate = DateTime.Now,
                         ClientName = clientName,
                         Description = $"{quantity}шт / {thicknessMm}мм",
-                        TotalPrice = Math.Round(finalTotal),
-                        OperationType = operationsLog // Записываем состав работ
+                        TotalPrice = Math.Round(result.TotalPrice),
+                        OperationType = result.Log
                     };
-
                     _db.SaveOrder(newOrder);
                     UpdateHistory();
-                }
-                else
-                {
-                    // Можно вывести сообщение, если нужно, или просто ничего не делать
-                    // MessageBox.Show("Расчет равен 0, запись не сохранена.");
                 }
             }
             catch (Exception ex)
@@ -205,7 +87,7 @@ namespace MetalCalcWPF
             }
         }
 
-        // !!! НОВОЕ: Обработчик удаления строки (ПКМ)
+        // Обработчик удаления строки (ПКМ)
         private void DeleteOrder_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выделенную строку
