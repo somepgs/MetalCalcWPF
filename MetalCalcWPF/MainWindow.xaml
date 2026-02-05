@@ -21,13 +21,46 @@
                     <Button Content="⚙ Настройки" HorizontalAlignment="Right" Click="Settings_Click" Margin="0,0,0,10" Padding="5,2"/>
 
                     <TextBlock Text="Клиент / Название заказа:" FontWeight="Bold"/>
-                    <TextBox x:Name="ClientBox" Height="25" Margin="0,5,0,10"/>
+                    <TextBox x:Name="ClientBox" Height="25" Margin="0,5,0,5"/>
 
-                    <TextBlock Text="Толщина металла (мм):" FontWeight="Bold"/>
-                    <TextBox x:Name="ThicknessBox" Height="25" Margin="0,5,0,10"/>
+                    <TextBlock Text="Материал:" FontWeight="Bold" Margin="0,5,0,0"/>
+                    <ComboBox x:Name="MaterialCombo" Height="25" Margin="0,5,0,5" SelectedIndex="0"/>
 
-                    <TextBlock Text="Количество деталей (шт):" FontWeight="Bold"/>
-                    <TextBox x:Name="QuantityBox" Height="25" Margin="0,5,0,5" Text="1"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                            <TextBlock Text="Толщина (мм):" FontWeight="Bold"/>
+                            <TextBox x:Name="ThicknessBox" Height="25" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                            <TextBlock Text="Количество (шт):" FontWeight="Bold"/>
+                            <TextBox x:Name="QuantityBox" Height="25" Margin="0,5,0,0" Text="1"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Габариты одной детали (мм):" FontWeight="Bold" Margin="0,10,0,0"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Ширина X:" FontSize="10" Foreground="Gray"/>
+                            <TextBox x:Name="WidthBox" Height="25"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1" Text="x" VerticalAlignment="Bottom" Margin="10,0,10,5" FontWeight="Bold"/>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Высота Y:" FontSize="10" Foreground="Gray"/>
+                            <TextBox x:Name="HeightBox" Height="25"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
 
                 <TabControl Grid.Row="1" Margin="0,0,0,10">

@@ -19,6 +19,7 @@ namespace MetalCalcWPF
                 db.CreateTable<MaterialProfile>();
                 db.CreateTable<OrderHistory>();
                 db.CreateTable<BendingProfile>();
+                db.CreateTable<MaterialType>();
 
                 // --- АВТО-ЗАПОЛНЕНИЕ ЛАЗЕРА ---
                 if (db.Table<MaterialProfile>().Count() == 0)
@@ -81,6 +82,19 @@ namespace MetalCalcWPF
                         new BendingProfile { Thickness = 20.0, V_Die = 250,MinFlange = 150,PriceLen1500 = 3500, PriceLen3000 = 8000, PriceLen6000 = 25000, SetupPrice = 20000 },
                     };
                     db.InsertAll(bendList);
+                }
+
+                // --- АВТО-ЗАПОЛНЕНИЕ МАТЕРИАЛОВ ---
+                if (db.Table<MaterialType>().Count() == 0)
+                {
+                    var materials = new System.Collections.Generic.List<MaterialType>
+                    {
+                        // Плотность стали ~7.85 г/см3
+                        new MaterialType { Name = "Черная сталь (Ст3)", Density = 7.85, BasePricePerKg = 355 },
+                        new MaterialType { Name = "Оцинковка", Density = 7.85, BasePricePerKg = 450 },     // Примерная цена
+                        new MaterialType { Name = "Нержавейка (AISI 304)", Density = 7.9, BasePricePerKg = 2500 } // Примерная цена
+                    };
+                    db.InsertAll(materials);
                 }
             }
         }
@@ -160,6 +174,14 @@ namespace MetalCalcWPF
                          .OrderByDescending(o => o.CreatedDate)
                          .Take(50)
                          .ToList();
+            }
+        }
+
+        public System.Collections.Generic.List<MaterialType> GetMaterials()
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<MaterialType>().ToList();
             }
         }
     }

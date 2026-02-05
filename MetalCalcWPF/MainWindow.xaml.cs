@@ -13,7 +13,11 @@ namespace MetalCalcWPF
         public MainWindow()
         {
             InitializeComponent();
-            UpdateHistory(); // Загружаем таблицу при запуске
+            UpdateHistory();
+
+            // Загружаем материалы в выпадающий список
+            MaterialCombo.ItemsSource = _db.GetMaterials();
+            MaterialCombo.SelectedIndex = 0; // Выбираем первый по умолчанию
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -35,6 +39,47 @@ namespace MetalCalcWPF
 
                 double totalPerDetail = 0; // Цена за ОДНУ штуку
                 string operationsLog = ""; // Строка для истории (что делали)
+
+                // --- 0. РАСЧЕТ МЕТАЛЛА ---
+                // Считываем габариты
+                double widthMm = GetSafeDouble(WidthBox.Text);
+                double heightMm = GetSafeDouble(HeightBox.Text);
+
+                if (widthMm > 0 && heightMm > 0)
+                {
+                    // Получаем выбранный материал
+                    var selectedMaterial = MaterialCombo.SelectedItem as MaterialType;
+                    if (selectedMaterial != null)
+                    {
+                        // 1. Считаем ВЕС (кг) = Длина(м) * Ширина(м) * Толщина(мм) * Плотность
+                        // Формула: (мм * мм * мм * г/см3) / 1 000 000 = кг
+                        double weightKg = (widthMm * heightMm * thicknessMm * selectedMaterial.Density) / 1000000.0;
+
+                        // 2. ОПРЕДЕЛЯЕМ ЦЕНУ ЗАКУПА (Твои условия)
+                        double costPricePerKg = selectedMaterial.BasePricePerKg;
+
+                        // Если это Черная сталь (Ст3) - применяем твою сетку цен
+                        if (selectedMaterial.Name.Contains("Ст3"))
+                        {
+                            if (thicknessMm <= 12) costPricePerKg = 355;
+                            else if (thicknessMm <= 25) costPricePerKg = 375;
+                            else costPricePerKg = 385; // для 30-40 мм
+                        }
+
+                        // 3. ДОБАВЛЯЕМ НАЦЕНКУ (из настроек, например 30%)
+                        double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
+
+                        // 4. СТОИМОСТЬ МЕТАЛЛА
+                        double materialCost = weightKg * sellPricePerKg;
+
+                        totalPerDetail += materialCost;
+
+                        // Добавляем в лог инфо о металле
+                        operationsLog += $"Metal({Math.Round(weightKg, 2)}kg) ";
+
+                        // Можно вывести инфо куда-то, но пока просто прибавим к сумме
+                    }
+                }
 
                 // --- 2. РАСЧЕТ ЛАЗЕРА (Если введена длина) ---
                 if (!string.IsNullOrWhiteSpace(LengthBox.Text) && LengthBox.Text != "0")

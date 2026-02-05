@@ -38,6 +38,11 @@ namespace MetalCalcWPF.Models
         // --- 3. СВАРКА (Вот это поле пропало, я его вернул!) ---
         public double WeldingCostPerCm { get; set; } = 20;
 
+        // --- 4. МАТЕРИАЛЫ ---
+        // Наценка на металл в процентах (чтобы перекрыть обрезки и доставку)
+        // Если купили за 355, а наценка 30%, то продаем за 461 тг
+        public double MaterialMarkupPercent { get; set; } = 30.0;
+
 
         // --- МЕТОДЫ РАСЧЕТА ---
 
