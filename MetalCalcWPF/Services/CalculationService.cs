@@ -1,5 +1,6 @@
 ﻿using System;
 using MetalCalcWPF.Models;
+using MetalCalcWPF.Services.Interfaces;
 
 namespace MetalCalcWPF.Services
 {
@@ -18,9 +19,9 @@ namespace MetalCalcWPF.Services
 
     public class CalculationService
     {
-        private readonly DatabaseService _db;
+        private readonly IDatabaseService _db;
 
-        public CalculationService(DatabaseService db)
+        public CalculationService(IDatabaseService db)
         {
             _db = db;
         }
@@ -31,17 +32,20 @@ namespace MetalCalcWPF.Services
             MaterialType material,
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
-            bool useWelding, double weldLengthCm)
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
         {
             var result = new CalculationResult();
             var settings = _db.GetSettings();
             string logBuilder = "";
 
             // --- 1. МЕТАЛЛ (Material) ---
-            if (widthMm > 0 && heightMm > 0 && material != null)
+            if (((widthMm > 0 && heightMm > 0) || measuredWeightKg > 0) && material != null)
             {
-                // Вес в кг
-                double weightKg = (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
+                // Вес в кг (можно задать напрямую)
+                double weightKg = measuredWeightKg > 0
+                    ? measuredWeightKg
+                    : (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
 
                 // Цена закупа (Сетка цен для Ст3)
                 double costPricePerKg = material.BasePricePerKg;
