@@ -1,4 +1,4 @@
-﻿<Window x:Class="MetalCalcWPF.MainWindow"
+<Window x:Class="MetalCalcWPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Управление цехом (Laser Manager)" Height="650" Width="1000" WindowStartupLocation="CenterScreen">
@@ -19,16 +19,18 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-                    <Button Content="🗄️ База данных" Click="OpenDb_Click" Margin="0,0,5,0" Padding="5,2" Background="#FFF0F0F0"/>
-                    <Button Content="⚙ Настройки" Click="Settings_Click" Padding="5,2"/>
+                    <Button Content="🗄️ База данных" Command="{Binding OpenDatabaseCommand}" Margin="0,0,5,0" Padding="5,2" Background="#FFF0F0F0"/>
+                    <Button Content="⚙ Настройки" Command="{Binding OpenSettingsCommand}" Padding="5,2"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Margin="0,0,0,10">
                     <TextBlock Text="Клиент / Название заказа:" FontWeight="Bold"/>
-                    <TextBox x:Name="ClientBox" Height="25" Margin="0,5,0,5"/>
+                    <TextBox Height="25" Margin="0,5,0,5" Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="Материал:" FontWeight="Bold" Margin="0,5,0,0"/>
-                    <ComboBox x:Name="MaterialCombo" Height="25" Margin="0,5,0,5" SelectedIndex="0"/>
+                    <ComboBox Height="25" Margin="0,5,0,5"
+                              ItemsSource="{Binding Materials}"
+                              SelectedItem="{Binding SelectedMaterial}"/>
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -37,11 +39,11 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,5,0">
                             <TextBlock Text="Толщина (мм):" FontWeight="Bold"/>
-                            <TextBox x:Name="ThicknessBox" Height="25" Margin="0,5,0,0"/>
+                            <TextBox Height="25" Margin="0,5,0,0" Text="{Binding ThicknessText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="5,0,0,0">
                             <TextBlock Text="Количество (шт):" FontWeight="Bold"/>
-                            <TextBox x:Name="QuantityBox" Height="25" Margin="0,5,0,0" Text="1"/>
+                            <TextBox Height="25" Margin="0,5,0,0" Text="{Binding QuantityText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                     </Grid>
 
@@ -55,14 +57,14 @@
 
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Ширина X:" FontSize="10" Foreground="Gray"/>
-                            <TextBox x:Name="WidthBox" Height="25"/>
+                            <TextBox Height="25" Text="{Binding WidthText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
 
                         <TextBlock Grid.Column="1" Text="x" VerticalAlignment="Bottom" Margin="10,0,10,5" FontWeight="Bold"/>
 
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Высота Y:" FontSize="10" Foreground="Gray"/>
-                            <TextBox x:Name="HeightBox" Height="25"/>
+                            <TextBox Height="25" Text="{Binding HeightText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>
@@ -71,26 +73,26 @@
                     <TabItem Header="🔥 Лазер">
                         <StackPanel Margin="10">
                             <TextBlock Text="Длина контура (метров):"/>
-                            <TextBox x:Name="LengthBox" Height="25" Margin="0,5,0,10"/>
+                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding LaserLengthText, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBlock Text="Введите длину реза одной детали" FontSize="10" Foreground="Gray"/>
                         </StackPanel>
                     </TabItem>
 
                     <TabItem Header="📐 Гибка">
                         <StackPanel Margin="10">
-                            <CheckBox x:Name="IsBendingEnabled" Content="Учитывать гибку в расчете" IsChecked="False" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <CheckBox Content="Учитывать гибку в расчете" IsChecked="{Binding UseBending}" FontWeight="Bold" Margin="0,0,0,10"/>
 
                             <TextBlock Text="Количество гибов (на 1 деталь):"/>
-                            <TextBox x:Name="BendsCountBox" Height="25" Margin="0,5,0,10" Text="0"/>
+                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding BendsCountText, UpdateSourceTrigger=PropertyChanged}"/>
 
                             <TextBlock Text="Длина линии гиба (мм):"/>
-                            <TextBox x:Name="BendLengthBox" Height="25" Margin="0,5,0,10" Text="0"/>
+                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding BendLengthText, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBlock Text="Влияет на стоимость (до 1.5м / до 3м / до 6м)" FontSize="10" Foreground="Gray" Margin="0,-5,0,10"/>
 
                             <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5" Background="#F0F0F0" Margin="0,10,0,0">
                                 <StackPanel>
                                     <TextBlock Text="Техническая информация:" FontWeight="Bold" FontSize="10"/>
-                                    <TextBlock x:Name="BendInfoLabel" Text="Выберите толщину..." FontSize="11" Foreground="Blue"/>
+                                    <TextBlock Text="Выберите толщину..." FontSize="11" Foreground="Blue"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -99,16 +101,16 @@
                     <TabItem Header="🏗️ Сварка">
                         <StackPanel Margin="10">
                             <TextBlock Text="Длина шва (см):"/>
-                            <TextBox x:Name="WeldLengthBox" Height="25" Margin="0,5,0,10" Text="0"/>
-                            <CheckBox x:Name="IsWeldingEnabled" Content="Учитывать сварку" IsChecked="False" FontWeight="Bold"/>
+                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding WeldLengthText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <CheckBox Content="Учитывать сварку" IsChecked="{Binding UseWelding}" FontWeight="Bold"/>
                         </StackPanel>
                     </TabItem>
                 </TabControl>
 
                 <StackPanel Grid.Row="3">
-                    <Button Content="Рассчитать всё" Height="45" Click="Button_Click" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
-                    <TextBlock x:Name="ResultLabel" Text="Итого: 0 ₸" FontSize="26" FontWeight="Bold" Margin="0,15,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="ResultDetails" Text="" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                    <Button Content="Рассчитать всё" Height="45" Command="{Binding CalculateCommand}" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding ResultText}" FontSize="26" FontWeight="Bold" Margin="0,15,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding ResultDetails}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,5,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -120,14 +122,16 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Button Grid.Row="0" Content="📊 Скачать в Excel" HorizontalAlignment="Right" 
-                        Width="120" Height="25" Margin="0,5,5,5" 
-                        Click="ExportToExcel_Click" Background="#E0F7FA"/>
+                <Button Grid.Row="0" Content="📊 Скачать в Excel" HorizontalAlignment="Right"
+                        Width="120" Height="25" Margin="0,5,5,5"
+                        Command="{Binding ExportToExcelCommand}" Background="#E0F7FA"/>
 
-                <DataGrid Grid.Row="1" x:Name="HistoryGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                <DataGrid Grid.Row="1" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedHistory}"
+                          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
                     <DataGrid.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="🗑 Удалить строку" Click="DeleteOrder_Click"/>
+                            <MenuItem Header="🗑 Удалить строку"
+                                      Command="{Binding DataContext.DeleteOrderCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                         </ContextMenu>
                     </DataGrid.ContextMenu>
                     <DataGrid.Columns>

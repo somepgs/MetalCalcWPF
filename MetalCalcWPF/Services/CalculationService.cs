@@ -1,5 +1,6 @@
 ﻿using System;
 using MetalCalcWPF.Models;
+using MetalCalcWPF.Services.Interfaces;
 
 namespace MetalCalcWPF.Services
 {
@@ -18,9 +19,9 @@ namespace MetalCalcWPF.Services
 
     public class CalculationService
     {
-        private readonly DatabaseService _db;
+        private readonly IDatabaseService _db;
 
-        public CalculationService(DatabaseService db)
+        public CalculationService(IDatabaseService db)
         {
             _db = db;
         }
