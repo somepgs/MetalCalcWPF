@@ -44,9 +44,9 @@
                         <DataGridTextColumn Header="Матрица V" Binding="{Binding V_Die}" Width="80"/>
                         <DataGridTextColumn Header="Мин. полка" Binding="{Binding MinFlange}" Width="80"/>
 
-                        <DataGridTextColumn Header="Цена (<1.5м)" Binding="{Binding PriceLen1500}" Width="100"/>
-                        <DataGridTextColumn Header="Цена (<3м)" Binding="{Binding PriceLen3000}" Width="100"/>
-                        <DataGridTextColumn Header="Цена (<6м)" Binding="{Binding PriceLen6000}" Width="100"/>
+                        <DataGridTextColumn Header="Цена (&lt;1.5м)" Binding="{Binding PriceLen1500}" Width="100"/>
+                        <DataGridTextColumn Header="Цена (&lt;3м)" Binding="{Binding PriceLen3000}" Width="100"/>
+                        <DataGridTextColumn Header="Цена (&lt;6м)" Binding="{Binding PriceLen6000}" Width="100"/>
 
                         <DataGridTextColumn Header="Наладка" Binding="{Binding SetupPrice}" Width="100"/>
                     </DataGrid.Columns>
