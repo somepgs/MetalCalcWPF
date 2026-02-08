@@ -32,7 +32,27 @@ namespace MetalCalcWPF.Services
             MaterialType? material,
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
-            bool useWelding, double weldLengthCm)
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
+        {
+            return CalculateOrder(
+                widthMm, heightMm, thicknessMm,
+                quantity,
+                material,
+                laserLengthMeters,
+                useBending, bendsCount, bendLengthMm,
+                useWelding, weldLengthCm,
+                0);
+        }
+
+        public CalculationResult CalculateOrder(
+            double widthMm, double heightMm, double thicknessMm,
+            int quantity,
+            MaterialType material,
+            double laserLengthMeters,
+            bool useBending, int bendsCount, double bendLengthMm,
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
         {
             return CalculateOrder(
                 widthMm, heightMm, thicknessMm,
@@ -61,11 +81,9 @@ namespace MetalCalcWPF.Services
             if (((widthMm > 0 && heightMm > 0) || measuredWeightKg > 0) && material != null)
             {
                 // Вес в кг (можно задать напрямую)
-                bool hasMeasuredWeight = measuredWeightKg > 0;
-                double weightKgPerPart = hasMeasuredWeight
+                double weightKg = measuredWeightKg > 0
                     ? measuredWeightKg
                     : (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
-                double totalWeightKg = hasMeasuredWeight ? measuredWeightKg : weightKgPerPart * quantity;
 
                 // Цена закупа (Сетка цен для Ст3)
                 double costPricePerKg = material.BasePricePerKg;
