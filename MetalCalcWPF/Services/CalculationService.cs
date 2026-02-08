@@ -1,5 +1,6 @@
 ﻿using System;
 using MetalCalcWPF.Models;
+using MetalCalcWPF.Services.Interfaces;
 
 namespace MetalCalcWPF.Services
 {
@@ -18,9 +19,9 @@ namespace MetalCalcWPF.Services
 
     public class CalculationService
     {
-        private readonly DatabaseService _db;
+        private readonly IDatabaseService _db;
 
-        public CalculationService(DatabaseService db)
+        public CalculationService(IDatabaseService db)
         {
             _db = db;
         }
@@ -28,20 +29,43 @@ namespace MetalCalcWPF.Services
         public CalculationResult CalculateOrder(
             double widthMm, double heightMm, double thicknessMm,
             int quantity,
-            MaterialType material,
+            MaterialType? material,
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm)
+        {
+            return CalculateOrder(
+                widthMm, heightMm, thicknessMm,
+                quantity,
+                material,
+                laserLengthMeters,
+                useBending, bendsCount, bendLengthMm,
+                useWelding, weldLengthCm,
+                0);
+        }
+
+        public CalculationResult CalculateOrder(
+            double widthMm, double heightMm, double thicknessMm,
+            int quantity,
+            MaterialType? material,
+            double laserLengthMeters,
+            bool useBending, int bendsCount, double bendLengthMm,
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
         {
             var result = new CalculationResult();
             var settings = _db.GetSettings();
             string logBuilder = "";
 
             // --- 1. МЕТАЛЛ (Material) ---
-            if (widthMm > 0 && heightMm > 0 && material != null)
+            if (((widthMm > 0 && heightMm > 0) || measuredWeightKg > 0) && material != null)
             {
-                // Вес в кг
-                double weightKg = (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
+                // Вес в кг (можно задать напрямую)
+                bool hasMeasuredWeight = measuredWeightKg > 0;
+                double weightKgPerPart = hasMeasuredWeight
+                    ? measuredWeightKg
+                    : (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
+                double totalWeightKg = hasMeasuredWeight ? measuredWeightKg : weightKgPerPart * quantity;
 
                 // Цена закупа (Сетка цен для Ст3)
                 double costPricePerKg = material.BasePricePerKg;
@@ -55,8 +79,10 @@ namespace MetalCalcWPF.Services
                 // Цена продажи = Закуп * (1 + Наценка%)
                 double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
 
-                result.MaterialCost = weightKg * sellPricePerKg * quantity; // На всю партию
-                logBuilder += $"Metal({Math.Round(weightKg, 1)}kg x {quantity}) ";
+                result.MaterialCost = totalWeightKg * sellPricePerKg; // На всю партию
+                logBuilder += hasMeasuredWeight
+                    ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
+                    : $"Metal({Math.Round(weightKgPerPart, 1)}kg x {quantity}) ";
             }
 
             // --- 2. ЛАЗЕР (Laser) ---
