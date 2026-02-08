@@ -179,5 +179,14 @@ namespace MetalCalcWPF
             if (double.TryParse(text, out double result)) return result;
             return 0;
         }
+
+        private void OpenDb_Click(object sender, RoutedEventArgs e)
+        {
+            var dbWindow = new DataEditWindow();
+            dbWindow.ShowDialog();
+            // После закрытия нужно обновить списки (например, материалы в выпадающем списке)
+            MaterialCombo.ItemsSource = _db.GetMaterials();
+            MaterialCombo.SelectedIndex = 0;
+        }
     }
 }

@@ -40,28 +40,28 @@ namespace MetalCalcWPF
                     var list = new System.Collections.Generic.List<MaterialProfile>
                     {
                         // Воздух
-                        new MaterialProfile { Thickness = 0.5, GasType = "Air", CuttingSpeed = 30.0, PiercePrice = 10, MarkupCoefficient = 150 },
+                        new MaterialProfile { Thickness = 0.5, GasType = "Air", CuttingSpeed = 25.0, PiercePrice = 10, MarkupCoefficient = 150 },
                         new MaterialProfile { Thickness = 1.0, GasType = "Air", CuttingSpeed = 25.0, PiercePrice = 20, MarkupCoefficient = 140 },
-                        new MaterialProfile { Thickness = 1.5, GasType = "Air", CuttingSpeed = 22.0, PiercePrice = 30, MarkupCoefficient = 130 },
+                        new MaterialProfile { Thickness = 1.5, GasType = "Air", CuttingSpeed = 20.0, PiercePrice = 30, MarkupCoefficient = 130 },
                         new MaterialProfile { Thickness = 2.0, GasType = "Air", CuttingSpeed = 20.0, PiercePrice = 40, MarkupCoefficient = 120 },
-                        new MaterialProfile { Thickness = 3.0, GasType = "Air", CuttingSpeed = 15.0, PiercePrice = 50, MarkupCoefficient = 110 },
-                        new MaterialProfile { Thickness = 4.0, GasType = "Air", CuttingSpeed = 13.0, PiercePrice = 60, MarkupCoefficient = 100 },
-                        new MaterialProfile { Thickness = 5.0, GasType = "Air", CuttingSpeed = 11.2, PiercePrice = 70, MarkupCoefficient = 90 },
-                        new MaterialProfile { Thickness = 6.0, GasType = "Air", CuttingSpeed = 8.0,  PiercePrice = 80, MarkupCoefficient = 80 },
-                        new MaterialProfile { Thickness = 8.0, GasType = "Air", CuttingSpeed = 5.5,  PiercePrice = 90, MarkupCoefficient = 70 },
-                        new MaterialProfile { Thickness = 10.0, GasType = "Air", CuttingSpeed = 3.5, PiercePrice = 100, MarkupCoefficient = 60 },
+                        new MaterialProfile { Thickness = 3.0, GasType = "Air", CuttingSpeed = 20.0, PiercePrice = 50, MarkupCoefficient = 110 },
+                        new MaterialProfile { Thickness = 4.0, GasType = "Air", CuttingSpeed = 18.0, PiercePrice = 60, MarkupCoefficient = 100 },
+                        new MaterialProfile { Thickness = 5.0, GasType = "Air", CuttingSpeed = 17.0, PiercePrice = 70, MarkupCoefficient = 90 },
+                        new MaterialProfile { Thickness = 6.0, GasType = "Air", CuttingSpeed = 12.0,  PiercePrice = 80, MarkupCoefficient = 80 },
+                        new MaterialProfile { Thickness = 8.0, GasType = "Air", CuttingSpeed = 9.4,  PiercePrice = 90, MarkupCoefficient = 70 },
+                        new MaterialProfile { Thickness = 10.0, GasType = "Air", CuttingSpeed = 6.0, PiercePrice = 100, MarkupCoefficient = 60 },
 
                         // Кислород
                         new MaterialProfile { Thickness = 12.0, GasType = "Oxygen", CuttingSpeed = 1.8, PiercePrice = 110, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 14.0, GasType = "Oxygen", CuttingSpeed = 1.6, PiercePrice = 120, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 16.0, GasType = "Oxygen", CuttingSpeed = 1.4, PiercePrice = 130, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 18.0, GasType = "Oxygen", CuttingSpeed = 1.2, PiercePrice = 140, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 20.0, GasType = "Oxygen", CuttingSpeed = 1.0, PiercePrice = 150, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 22.0, GasType = "Oxygen", CuttingSpeed = 0.9, PiercePrice = 160, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 25.0, GasType = "Oxygen", CuttingSpeed = 0.7, PiercePrice = 170, MarkupCoefficient = 35 },
+                        new MaterialProfile { Thickness = 14.0, GasType = "Oxygen", CuttingSpeed = 1.7, PiercePrice = 120, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 16.0, GasType = "Oxygen", CuttingSpeed = 1.5, PiercePrice = 130, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 18.0, GasType = "Oxygen", CuttingSpeed = 1.25, PiercePrice = 140, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 20.0, GasType = "Oxygen", CuttingSpeed = 1.1, PiercePrice = 150, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 22.0, GasType = "Oxygen", CuttingSpeed = 1.1, PiercePrice = 160, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 25.0, GasType = "Oxygen", CuttingSpeed = 0.8, PiercePrice = 170, MarkupCoefficient = 35 },
                         new MaterialProfile { Thickness = 30.0, GasType = "Oxygen", CuttingSpeed = 0.5, PiercePrice = 180, MarkupCoefficient = 35 },
-                        new MaterialProfile { Thickness = 32.0, GasType = "Oxygen", CuttingSpeed = 0.4, PiercePrice = 190, MarkupCoefficient = 35 },
-                        new MaterialProfile { Thickness = 36.0, GasType = "Oxygen", CuttingSpeed = 0.3, PiercePrice = 200, MarkupCoefficient = 35 },
+                        new MaterialProfile { Thickness = 32.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 190, MarkupCoefficient = 35 },
+                        new MaterialProfile { Thickness = 35.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 200, MarkupCoefficient = 35 },
                         new MaterialProfile { Thickness = 40.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 210, MarkupCoefficient = 35 },
                     };
                     db.InsertAll(list);
@@ -169,7 +169,7 @@ namespace MetalCalcWPF
             }
         }
 
-        // !!! НОВОЕ: Удалить заказ по ID
+        // Удалить заказ по ID
         public void DeleteOrder(int id)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -195,6 +195,54 @@ namespace MetalCalcWPF
             using (var db = new SQLiteConnection(_dbPath))
             {
                 return db.Table<MaterialType>().ToList();
+            }
+        }
+
+        // 1. Методы для МАТЕРИАЛОВ
+        public List<MaterialType> GetMaterials()
+        {
+            using (var db = new SQLiteConnection(_dbPath)) { return db.Table<MaterialType>().ToList(); }
+        }
+        public void UpdateAllMaterials(List<MaterialType> list)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.UpdateAll(list);
+                // Если добавили новые строки, их надо вставить, а не обновить.
+                // Для простоты пока используем UpdateAll, но новые строки без ID могут не сохраниться.
+                // Правильнее: db.DeleteAll<MaterialType>(); db.InsertAll(list); (Жесткий метод, но надежный для справочников)
+
+                // Давай сделаем надежно: полная перезапись справочника
+                db.DeleteAll<MaterialType>();
+                db.InsertAll(list);
+            }
+        }
+
+        // 2. Методы для ЛАЗЕРА
+        public List<MaterialProfile> GetAllLaserProfiles()
+        {
+            using (var db = new SQLiteConnection(_dbPath)) { return db.Table<MaterialProfile>().OrderBy(p => p.Thickness).ToList(); }
+        }
+        public void UpdateAllLaserProfiles(List<MaterialProfile> list)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.DeleteAll<MaterialProfile>();
+                db.InsertAll(list);
+            }
+        }
+
+        // 3. Методы для ГИБКИ
+        public List<BendingProfile> GetAllBendingProfiles()
+        {
+            using (var db = new SQLiteConnection(_dbPath)) { return db.Table<BendingProfile>().OrderBy(p => p.Thickness).ToList(); }
+        }
+        public void UpdateAllBendingProfiles(List<BendingProfile> list)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.DeleteAll<BendingProfile>();
+                db.InsertAll(list);
             }
         }
     }
