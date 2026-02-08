@@ -1,11 +1,13 @@
 ﻿using SQLite;
+using System.Collections.Generic;
 using System.IO;
-using MetalCalcWPF.Models; // Подключаем наши модели
-using System.Linq; // Нужно для FirstOrDefault
+using System.Linq;
+using MetalCalcWPF.Models;
+using MetalCalcWPF.Services.Interfaces;
 
 namespace MetalCalcWPF
 {
-    public class DatabaseService
+    public class DatabaseService : IDatabaseService
     {
         // Путь: C:\Users\User\Documents\MetalCalc\workshop.db
         private readonly string _dbPath;
@@ -179,7 +181,7 @@ namespace MetalCalcWPF
         }
 
         // Получить последние 50 заказов
-        public System.Collections.Generic.List<OrderHistory> GetRecentOrders()
+        public List<OrderHistory> GetRecentOrders()
         {
             using (var db = new SQLiteConnection(_dbPath))
             {
@@ -190,7 +192,7 @@ namespace MetalCalcWPF
             }
         }
 
-        public System.Collections.Generic.List<MaterialType> GetMaterials()
+        public List<MaterialType> GetMaterials()
         {
             using (var db = new SQLiteConnection(_dbPath))
             {
@@ -199,10 +201,6 @@ namespace MetalCalcWPF
         }
 
         // 1. Методы для МАТЕРИАЛОВ
-        public List<MaterialType> GetMaterials()
-        {
-            using (var db = new SQLiteConnection(_dbPath)) { return db.Table<MaterialType>().ToList(); }
-        }
         public void UpdateAllMaterials(List<MaterialType> list)
         {
             using (var db = new SQLiteConnection(_dbPath))
