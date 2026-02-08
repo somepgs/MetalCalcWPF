@@ -23,7 +23,6 @@ namespace MetalCalcWPF.ViewModels
         private string _quantityText = "1";
         private string _widthText = string.Empty;
         private string _heightText = string.Empty;
-        private string _weightText = string.Empty;
         private string _laserLengthText = string.Empty;
         private bool _useBending;
         private string _bendsCountText = "0";
@@ -90,12 +89,6 @@ namespace MetalCalcWPF.ViewModels
         {
             get => _heightText;
             set => SetProperty(ref _heightText, value);
-        }
-
-        public string WeightText
-        {
-            get => _weightText;
-            set => SetProperty(ref _weightText, value);
         }
 
         public string LaserLengthText
@@ -185,7 +178,6 @@ namespace MetalCalcWPF.ViewModels
 
                 double widthMm = ParseDouble(WidthText);
                 double heightMm = ParseDouble(HeightText);
-                double measuredWeightKg = ParseDouble(WeightText);
                 double laserLen = ParseDouble(LaserLengthText);
                 int bendsCount = (int)ParseDouble(BendsCountText);
                 double bendLenMm = ParseDouble(BendLengthText);
@@ -195,8 +187,7 @@ namespace MetalCalcWPF.ViewModels
                     widthMm, heightMm, thicknessMm, quantity, SelectedMaterial,
                     laserLen,
                     UseBending, bendsCount, bendLenMm,
-                    UseWelding, weldCm,
-                    measuredWeightKg
+                    UseWelding, weldCm
                 );
 
                 ResultText = $"Итого: {Math.Round(result.TotalPrice)} ₸";
@@ -207,21 +198,11 @@ namespace MetalCalcWPF.ViewModels
 
                 if (result.TotalPrice > 0)
                 {
-                    var descriptionParts = new System.Collections.Generic.List<string>
-                    {
-                        $"{quantity}шт",
-                        $"{thicknessMm}мм"
-                    };
-                    if (measuredWeightKg > 0)
-                    {
-                        descriptionParts.Add($"{measuredWeightKg}кг");
-                    }
-
                     var newOrder = new OrderHistory
                     {
                         CreatedDate = DateTime.Now,
                         ClientName = clientName,
-                        Description = string.Join(" / ", descriptionParts),
+                        Description = $"{quantity}шт / {thicknessMm}мм",
                         TotalPrice = Math.Round(result.TotalPrice),
                         OperationType = result.Log
                     };

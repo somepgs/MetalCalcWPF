@@ -32,7 +32,8 @@ namespace MetalCalcWPF.Services
             MaterialType material,
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
-            bool useWelding, double weldLengthCm)
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
         {
             return CalculateOrder(
                 widthMm, heightMm, thicknessMm,
