@@ -15,6 +15,9 @@ namespace MetalCalcWPF.Services
         public double TotalPrice => MaterialCost + LaserCost + BendingCost + WeldingCost;
 
         public string Log { get; set; }           // История (что посчитали)
+
+        // ✅ НОВОЕ: Детализация расчета лазера
+        public string LaserDetails { get; set; }  // Подробности расчета лазера
     }
 
     public class CalculationService
@@ -29,23 +32,12 @@ namespace MetalCalcWPF.Services
         /// <summary>
         /// Главный метод расчета стоимости заказа
         /// </summary>
-        /// <param name="widthMm">Ширина детали (мм)</param>
-        /// <param name="heightMm">Высота детали (мм)</param>
-        /// <param name="thicknessMm">Толщина металла (мм)</param>
-        /// <param name="quantity">Количество деталей</param>
-        /// <param name="material">Тип материала</param>
-        /// <param name="laserLengthMeters">Длина контура резки (метры)</param>
-        /// <param name="useBending">Учитывать гибку?</param>
-        /// <param name="bendsCount">Количество гибов на деталь</param>
-        /// <param name="bendLengthMm">Длина линии гиба (мм)</param>
-        /// <param name="useWelding">Учитывать сварку?</param>
-        /// <param name="weldLengthCm">Длина шва (см)</param>
-        /// <param name="measuredWeightKg">Измеренный вес партии (кг). Если 0 - рассчитывается по габаритам</param>
         public CalculationResult CalculateOrder(
             double widthMm, double heightMm, double thicknessMm,
             int quantity,
             MaterialType? material,
             double laserLengthMeters,
+            int piercesCount, // ✅ НОВОЕ: Количество отверстий (пробивок)
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
             double measuredWeightKg = 0)
@@ -63,14 +55,10 @@ namespace MetalCalcWPF.Services
 
                 if (hasMeasuredWeight)
                 {
-                    // Если задан общий вес партии - делим на количество
                     weightKgPerPart = measuredWeightKg / quantity;
                 }
                 else
                 {
-                    // Иначе рассчитываем по габаритам: V = Ширина * Высота * Толщина (в мм³)
-                    // Переводим в см³ (делим на 1000) и умножаем на плотность (г/см³)
-                    // Результат в граммах делим на 1000 для получения кг
                     weightKgPerPart = (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
                 }
 
@@ -89,7 +77,7 @@ namespace MetalCalcWPF.Services
                 // Цена продажи = Закуп * (1 + Наценка%)
                 double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
 
-                result.MaterialCost = totalWeightKg * sellPricePerKg; // На всю партию
+                result.MaterialCost = totalWeightKg * sellPricePerKg;
 
                 logBuilder += hasMeasuredWeight
                     ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
@@ -104,32 +92,63 @@ namespace MetalCalcWPF.Services
                 {
                     // А. Время резки (часы)
                     double cuttingTimeHours = (laserLengthMeters / profile.CuttingSpeed) / 60.0;
+                    double cuttingTimeMinutes = cuttingTimeHours * 60.0;
 
-                    // Б. Стоимость часа работы станка (ЗП + Свет + Амортизация)
+                    // Б. Определяем тип газа
                     bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
+
+                    // В. Стоимость часа работы станка (ЗП + Свет + Амортизация)
                     double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
 
+                    // ✅ НОВЫЙ РАСЧЕТ КИСЛОРОДА (ТОЧНЫЙ)
+                    double oxygenCost = 0;
                     if (!isAir)
-                        machineCostPerHour += settings.OxygenBottlePrice / 4.0; // Газ
+                    {
+                        // Параметры из настроек
+                        double oxygenBottleVolumeLiters = settings.OxygenBottleVolumeLiters; // 40 литров
+                        double oxygenBottlePressureAtm = settings.OxygenBottlePressureAtm;   // 150 атм
+                        double oxygenFlowRateLpm = settings.OxygenFlowRateLpm;               // 15 л/мин
+                        double oxygenBottlePrice = settings.OxygenBottlePrice;               // 5000 тг
 
-                    // В. Себестоимость резки = Время * Тариф
+                        // Общий объем кислорода в баллоне при атмосферном давлении
+                        double totalOxygenLiters = oxygenBottleVolumeLiters * oxygenBottlePressureAtm;
+
+                        // Время работы одного баллона (минуты)
+                        double bottleWorkTimeMinutes = totalOxygenLiters / oxygenFlowRateLpm;
+
+                        // Цена кислорода за минуту
+                        double oxygenCostPerMinute = oxygenBottlePrice / bottleWorkTimeMinutes;
+
+                        // Стоимость кислорода для этой детали
+                        oxygenCost = oxygenCostPerMinute * cuttingTimeMinutes * quantity;
+                    }
+
+                    // Г. Себестоимость резки = Время * Тариф
                     double costPrice = cuttingTimeHours * machineCostPerHour;
 
-                    // Г. Цена для клиента = Себестоимость * Наценку (Markup) + Пробивка
-                    // MarkupCoefficient у нас большой (например 60), он работает как множитель
+                    // Д. Цена для клиента = Себестоимость * Наценку (Markup)
                     double priceForCutting = costPrice * profile.MarkupCoefficient;
-                    double priceForPierce = profile.PiercePrice;
 
-                    // Д. Сложность (Кувалда)
+                    // ✅ НОВЫЙ РАСЧЕТ ПРОБИВОК (множитель на количество отверстий)
+                    double priceForPierces = profile.PiercePrice * piercesCount;
+
+                    // Е. Сложность (Кувалда)
                     double handlingExtra = 0;
                     if (thicknessMm > settings.HeavyMaterialThresholdMm)
                         handlingExtra = settings.HeavyHandlingCostPerDetail;
 
                     // Итого за 1 деталь
-                    double laserTotalPerOne = priceForCutting + priceForPierce + handlingExtra;
+                    double laserTotalPerOne = priceForCutting + priceForPierces + handlingExtra + (oxygenCost / quantity);
 
                     result.LaserCost = laserTotalPerOne * quantity;
-                    logBuilder += "+ Laser ";
+
+                    // ✅ НОВОЕ: Детализация для отладки
+                    result.LaserDetails = $"Резка: {Math.Round(priceForCutting * quantity):N0} ₸ | " +
+                                         $"Пробивки ({piercesCount}шт): {Math.Round(priceForPierces * quantity):N0} ₸ | " +
+                                         $"Кислород: {Math.Round(oxygenCost):N0} ₸ | " +
+                                         $"Тяжесть: {Math.Round(handlingExtra * quantity):N0} ₸";
+
+                    logBuilder += $"+ Laser({piercesCount}x pierce) ";
                 }
             }
 

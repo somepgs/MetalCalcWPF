@@ -15,8 +15,13 @@ namespace MetalCalcWPF.Models
         public int WorkDaysPerMonth { get; set; } = 26;
         public int WorkHoursPerDay { get; set; } = 8;
 
-        public double OxygenBottlePrice { get; set; } = 3000;
+        public double OxygenBottlePrice { get; set; } = 5000; // ✅ ОБНОВЛЕНО: 5000 тенге
         public double AmortizationPerHour { get; set; } = 650;
+
+        // ✅ НОВЫЕ ПАРАМЕТРЫ КИСЛОРОДА
+        public double OxygenBottleVolumeLiters { get; set; } = 40;    // Объем баллона (литры)
+        public double OxygenBottlePressureAtm { get; set; } = 150;    // Давление (атмосферы)
+        public double OxygenFlowRateLpm { get; set; } = 15;           // Расход (л/мин)
 
         // Сложность (Кувалда)
         public double HeavyMaterialThresholdMm { get; set; } = 20.0;
@@ -35,14 +40,11 @@ namespace MetalCalcWPF.Models
         public double BendingSetupPrice { get; set; } = 1000; // Резерв
         public double BendingBasePrice { get; set; } = 50;    // Резерв
 
-        // --- 3. СВАРКА (Вот это поле пропало, я его вернул!) ---
+        // --- 3. СВАРКА ---
         public double WeldingCostPerCm { get; set; } = 20;
 
         // --- 4. МАТЕРИАЛЫ ---
-        // Наценка на металл в процентах (чтобы перекрыть обрезки и доставку)
-        // Если купили за 355, а наценка 30%, то продаем за 461 тг
         public double MaterialMarkupPercent { get; set; } = 30.0;
-
 
         // --- МЕТОДЫ РАСЧЕТА ---
 
@@ -70,6 +72,19 @@ namespace MetalCalcWPF.Models
             double powerCost = BendingMachinePower * ElectricityPricePerKw;
 
             return salaryPerHour + powerCost + AmortizationPerHour;
+        }
+
+        // ✅ НОВЫЙ МЕТОД: Расчет стоимости кислорода за минуту работы
+        public double GetOxygenCostPerMinute()
+        {
+            // Общий объем кислорода в баллоне (литры при атмосферном давлении)
+            double totalOxygenLiters = OxygenBottleVolumeLiters * OxygenBottlePressureAtm;
+
+            // Время работы одного баллона (минуты)
+            double bottleWorkTimeMinutes = totalOxygenLiters / OxygenFlowRateLpm;
+
+            // Цена за минуту
+            return OxygenBottlePrice / bottleWorkTimeMinutes;
         }
     }
 }

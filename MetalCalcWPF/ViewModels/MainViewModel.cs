@@ -23,8 +23,9 @@ namespace MetalCalcWPF.ViewModels
         private string _quantityText = "1";
         private string _widthText = string.Empty;
         private string _heightText = string.Empty;
-        private string _weightText = string.Empty; // ✅ Добавлено поле для ввода веса
+        private string _weightText = string.Empty;
         private string _laserLengthText = string.Empty;
+        private string _piercesCountText = "1"; // ✅ НОВОЕ: Количество отверстий
         private bool _useBending;
         private string _bendsCountText = "0";
         private string _bendLengthText = "0";
@@ -91,7 +92,7 @@ namespace MetalCalcWPF.ViewModels
             set => SetProperty(ref _heightText, value);
         }
 
-        public string WeightText // ✅ Добавлено свойство
+        public string WeightText
         {
             get => _weightText;
             set => SetProperty(ref _weightText, value);
@@ -101,6 +102,13 @@ namespace MetalCalcWPF.ViewModels
         {
             get => _laserLengthText;
             set => SetProperty(ref _laserLengthText, value);
+        }
+
+        // ✅ НОВОЕ СВОЙСТВО
+        public string PiercesCountText
+        {
+            get => _piercesCountText;
+            set => SetProperty(ref _piercesCountText, value);
         }
 
         public bool UseBending
@@ -173,7 +181,7 @@ namespace MetalCalcWPF.ViewModels
         {
             try
             {
-                // ✅ Валидация
+                // Валидация
                 if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
                 {
                     _messageService.ShowError("Укажите корректную толщину металла!");
@@ -194,19 +202,22 @@ namespace MetalCalcWPF.ViewModels
 
                 double widthMm = ParseDouble(WidthText);
                 double heightMm = ParseDouble(HeightText);
-                double weightKg = ParseDouble(WeightText); // ✅ Считываем вес
+                double weightKg = ParseDouble(WeightText);
                 double laserLen = ParseDouble(LaserLengthText);
+                int piercesCount = (int)ParseDouble(PiercesCountText); // ✅ НОВОЕ
+                if (piercesCount < 1) piercesCount = 1; // Минимум 1 пробивка
+
                 int bendsCount = (int)ParseDouble(BendsCountText);
                 double bendLenMm = ParseDouble(BendLengthText);
                 double weldCm = ParseDouble(WeldLengthText);
 
-                // ✅ Исправлен вызов - теперь передаем weightKg
+                // ✅ ОБНОВЛЕННЫЙ ВЫЗОВ с количеством пробивок
                 var result = _calculator.CalculateOrder(
                     widthMm, heightMm, thicknessMm, quantity, SelectedMaterial,
-                    laserLen,
+                    laserLen, piercesCount, // ✅ Передаем количество пробивок
                     UseBending, bendsCount, bendLenMm,
                     UseWelding, weldCm,
-                    weightKg  // ✅ Передаем измеренный вес
+                    weightKg
                 );
 
                 ResultText = $"Итого: {Math.Round(result.TotalPrice):N0} ₸";

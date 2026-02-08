@@ -79,7 +79,13 @@
                         <StackPanel Margin="10">
                             <TextBlock Text="Длина контура (метров):"/>
                             <TextBox Height="25" Margin="0,5,0,10" Text="{Binding LaserLengthText, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Введите длину реза одной детали" FontSize="10" Foreground="Gray"/>
+                            
+                            <!-- ✅ НОВОЕ ПОЛЕ -->
+                            <TextBlock Text="Количество отверстий (пробивок):"/>
+                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding PiercesCountText, UpdateSourceTrigger=PropertyChanged}"/>
+                            
+                            <TextBlock Text="Длина реза одной детали + количество пробивок влияют на стоимость" 
+                                       FontSize="10" Foreground="Gray" TextWrapping="Wrap"/>
                         </StackPanel>
                     </TabItem>
 
