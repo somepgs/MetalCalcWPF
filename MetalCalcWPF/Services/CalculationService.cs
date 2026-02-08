@@ -35,6 +35,25 @@ namespace MetalCalcWPF.Services
             bool useWelding, double weldLengthCm,
             double measuredWeightKg)
         {
+            return CalculateOrder(
+                widthMm, heightMm, thicknessMm,
+                quantity,
+                material,
+                laserLengthMeters,
+                useBending, bendsCount, bendLengthMm,
+                useWelding, weldLengthCm,
+                0);
+        }
+
+        public CalculationResult CalculateOrder(
+            double widthMm, double heightMm, double thicknessMm,
+            int quantity,
+            MaterialType material,
+            double laserLengthMeters,
+            bool useBending, int bendsCount, double bendLengthMm,
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
+        {
             var result = new CalculationResult();
             var settings = _db.GetSettings();
             string logBuilder = "";
