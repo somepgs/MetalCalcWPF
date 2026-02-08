@@ -29,7 +29,7 @@ namespace MetalCalcWPF.Services
         public CalculationResult CalculateOrder(
             double widthMm, double heightMm, double thicknessMm,
             int quantity,
-            MaterialType material,
+            MaterialType? material,
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
@@ -49,6 +49,25 @@ namespace MetalCalcWPF.Services
             double widthMm, double heightMm, double thicknessMm,
             int quantity,
             MaterialType material,
+            double laserLengthMeters,
+            bool useBending, int bendsCount, double bendLengthMm,
+            bool useWelding, double weldLengthCm,
+            double measuredWeightKg)
+        {
+            return CalculateOrder(
+                widthMm, heightMm, thicknessMm,
+                quantity,
+                material,
+                laserLengthMeters,
+                useBending, bendsCount, bendLengthMm,
+                useWelding, weldLengthCm,
+                0);
+        }
+
+        public CalculationResult CalculateOrder(
+            double widthMm, double heightMm, double thicknessMm,
+            int quantity,
+            MaterialType? material,
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
@@ -78,8 +97,10 @@ namespace MetalCalcWPF.Services
                 // Цена продажи = Закуп * (1 + Наценка%)
                 double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
 
-                result.MaterialCost = weightKg * sellPricePerKg * quantity; // На всю партию
-                logBuilder += $"Metal({Math.Round(weightKg, 1)}kg x {quantity}) ";
+                result.MaterialCost = totalWeightKg * sellPricePerKg; // На всю партию
+                logBuilder += hasMeasuredWeight
+                    ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
+                    : $"Metal({Math.Round(weightKgPerPart, 1)}kg x {quantity}) ";
             }
 
             // --- 2. ЛАЗЕР (Laser) ---
