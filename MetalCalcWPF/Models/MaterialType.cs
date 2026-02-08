@@ -9,7 +9,7 @@ namespace MetalCalcWPF.Models
 
         public string Name { get; set; }      // "Черная сталь (Ст3)", "Нержавейка"
         public double Density { get; set; }   // Плотность (г/см3). Для стали 7.85
-        public double BasePricePerKg { get; set; } // Базовая цена (если фиксированная)
+        public decimal BasePricePerKg { get; set; } // Базовая цена (если фиксированная)
 
         // Переопределение метода ToString, чтобы в выпадающем списке писалось название
         public override string ToString()

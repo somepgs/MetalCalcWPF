@@ -13,7 +13,7 @@ namespace MetalCalcWPF.Models
         public string ClientName { get; set; } // Имя клиента или название детали
         public string Description { get; set; } // Краткое описание (например: "10мм, 20м")
 
-        public double TotalPrice { get; set; } // Итоговая сумма
+        public decimal TotalPrice { get; set; } // Итоговая сумма
 
         // !!! НОВОЕ: Тип операции !!!
         // Пока будем писать сюда "Laser", а потом добавим "Bending", "Welding"

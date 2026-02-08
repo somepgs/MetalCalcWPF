@@ -41,6 +41,8 @@ namespace MetalCalcWPF.ViewModels
             _settings = _databaseService.GetSettings();
 
             SaveCommand = new RelayCommand(_ => Save());
+            AddLaserProfileCommand = new RelayCommand(_ => AddLaserProfile());
+            RemoveLaserProfileCommand = new RelayCommand(p => RemoveLaserProfile(p));
             LoadFromSettings(_settings);
 
             // Подписка на изменения для автоматического пересчета
@@ -57,6 +59,8 @@ namespace MetalCalcWPF.ViewModels
         }
 
         public RelayCommand SaveCommand { get; }
+        public RelayCommand AddLaserProfileCommand { get; }
+        public RelayCommand RemoveLaserProfileCommand { get; }
 
         public string SalaryText
         {
@@ -167,6 +171,16 @@ namespace MetalCalcWPF.ViewModels
             set => SetProperty(ref _pierceTimeText, value);
         }
 
+        // Список профилей резки для редактирования
+        public System.Collections.ObjectModel.ObservableCollection<MaterialProfile> LaserProfiles { get; private set; } = new System.Collections.ObjectModel.ObservableCollection<MaterialProfile>();
+
+        private MaterialProfile? _selectedLaserProfile;
+        public MaterialProfile? SelectedLaserProfile
+        {
+            get => _selectedLaserProfile;
+            set => SetProperty(ref _selectedLaserProfile, value);
+        }
+
         private void LoadFromSettings(WorkshopSettings settings)
         {
             SalaryText = settings.OperatorMonthlySalary.ToString();
@@ -192,6 +206,29 @@ namespace MetalCalcWPF.ViewModels
             PierceTimeText = settings.PierceTimeSeconds.ToString();
 
             UpdateOxygenCalculation();
+
+            // Загрузка профилей резки
+            LaserProfiles.Clear();
+            foreach (var p in _databaseService.GetAllLaserProfiles())
+            {
+                LaserProfiles.Add(p);
+            }
+            SelectedLaserProfile = LaserProfiles.Count > 0 ? LaserProfiles[0] : null;
+        }
+
+        private void AddLaserProfile()
+        {
+            var p = new MaterialProfile { Thickness = 0, GasType = "Air", CuttingSpeed = 1, PiercePrice = 0, MarkupCoefficient = 100 };
+            LaserProfiles.Add(p);
+            SelectedLaserProfile = p;
+        }
+
+        private void RemoveLaserProfile(object? param)
+        {
+            if (param is MaterialProfile p && LaserProfiles.Contains(p))
+            {
+                LaserProfiles.Remove(p);
+            }
         }
 
         // ✅ АВТОМАТИЧЕСКИЙ РАСЧЕТ ПОКАЗАТЕЛЕЙ КИСЛОРОДА
@@ -236,29 +273,33 @@ namespace MetalCalcWPF.ViewModels
         {
             try
             {
-                _settings.OperatorMonthlySalary = ParseDouble(SalaryText);
+                _settings.OperatorMonthlySalary = ParseDecimal(SalaryText);
                 _settings.WorkDaysPerMonth = (int)ParseDouble(DaysText);
                 _settings.WorkHoursPerDay = (int)ParseDouble(HoursText);
-                _settings.BendingOperatorSalary = ParseDouble(BendingSalaryText);
-                _settings.ElectricityPricePerKw = ParseDouble(ElectricityText);
-                _settings.AmortizationPerHour = ParseDouble(AmortizationText);
-                _settings.MaterialMarkupPercent = ParseDouble(MaterialMarkupText);
+                _settings.BendingOperatorSalary = ParseDecimal(BendingSalaryText);
+                _settings.ElectricityPricePerKw = ParseDecimal(ElectricityText);
+                _settings.AmortizationPerHour = ParseDecimal(AmortizationText);
+                _settings.MaterialMarkupPercent = ParseDecimal(MaterialMarkupText);
                 _settings.HeavyMaterialThresholdMm = ParseDouble(ThresholdText);
-                _settings.HeavyHandlingCostPerDetail = ParseDouble(HeavyCostText);
-                _settings.WeldingCostPerCm = ParseDouble(WeldCostText);
+                _settings.HeavyHandlingCostPerDetail = ParseDecimal(HeavyCostText);
+                _settings.WeldingCostPerCm = ParseDecimal(WeldCostText);
 
                 // ✅ Кислород
                 _settings.OxygenBottleVolumeLiters = ParseDouble(OxygenVolumeText);
                 _settings.OxygenBottlePressureAtm = ParseDouble(OxygenPressureText);
                 _settings.OxygenFlowRateLpm = ParseDouble(OxygenFlowText);
-                _settings.OxygenBottlePrice = ParseDouble(OxygenPriceText);
+                _settings.OxygenBottlePrice = ParseDecimal(OxygenPriceText);
 
                 // Новые параметры лазера
-                _settings.LaserSetupCostPerJob = ParseDouble(LaserSetupText);
-                _settings.LaserMinChargePerJob = ParseDouble(LaserMinChargeText);
+                _settings.LaserSetupCostPerJob = ParseDecimal(LaserSetupText);
+                _settings.LaserMinChargePerJob = ParseDecimal(LaserMinChargeText);
                 _settings.PierceTimeSeconds = ParseDouble(PierceTimeText);
 
                 _databaseService.SaveSettings(_settings);
+
+                // Сохраняем профили резки
+                _databaseService.UpdateAllLaserProfiles(new System.Collections.Generic.List<MaterialProfile>(LaserProfiles));
+
                 _messageService.ShowInfo("Настройки сохранены!");
             }
             catch (Exception ex)
@@ -270,6 +311,15 @@ namespace MetalCalcWPF.ViewModels
         private static double ParseDouble(string? text)
         {
             return NumberParser.TryParseDouble(text, out var value) ? value : 0;
+        }
+
+        private static decimal ParseDecimal(string? text)
+        {
+            if (NumberParser.TryParseDouble(text, out var d))
+            {
+                return (decimal)d;
+            }
+            return 0m;
         }
     }
 }

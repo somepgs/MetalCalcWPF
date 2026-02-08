@@ -1,6 +1,7 @@
 <Window x:Class="MetalCalcWPF.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:infra="clr-namespace:MetalCalcWPF.Infrastructure"
         Title="Настройки цеха" Height="650" Width="550" WindowStartupLocation="CenterScreen">
 
     <Grid Margin="10">
@@ -17,11 +18,35 @@
                         <GroupBox Header="Лазерный участок" Margin="0,0,0,10" Padding="5">
                             <StackPanel>
                                 <TextBlock Text="Оклад оператора (тг):"/>
-                                <TextBox Margin="0,2,0,5" Text="{Binding SalaryText, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Margin="0,2,0,5">
+                                    <TextBox.Text>
+                                        <Binding Path="SalaryText" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <infra:PositiveDoubleValidationRule />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
                                 <TextBlock Text="График (Дней / Часов):"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBox Width="50" Margin="0,0,5,0" Text="{Binding DaysText, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <TextBox Width="50" Text="{Binding HoursText, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Width="50" Margin="0,0,5,0">
+                                        <TextBox.Text>
+                                            <Binding Path="DaysText" UpdateSourceTrigger="PropertyChanged">
+                                                <Binding.ValidationRules>
+                                                    <infra:IntegerValidationRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBox Width="50">
+                                        <TextBox.Text>
+                                            <Binding Path="HoursText" UpdateSourceTrigger="PropertyChanged">
+                                                <Binding.ValidationRules>
+                                                    <infra:IntegerValidationRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
@@ -29,16 +54,40 @@
                         <GroupBox Header="Гибочный участок" Margin="0,0,0,10" Padding="5">
                             <StackPanel>
                                 <TextBlock Text="Оклад оператора (тг):"/>
-                                <TextBox Margin="0,2,0,5" Text="{Binding BendingSalaryText, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Margin="0,2,0,5">
+                                    <TextBox.Text>
+                                        <Binding Path="BendingSalaryText" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <infra:PositiveDoubleValidationRule />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
                             </StackPanel>
                         </GroupBox>
 
                         <GroupBox Header="Расходы цеха" Padding="5">
                             <StackPanel>
                                 <TextBlock Text="Электричество (тг/кВт):"/>
-                                <TextBox Margin="0,2,0,5" Text="{Binding ElectricityText, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Margin="0,2,0,5">
+                                    <TextBox.Text>
+                                        <Binding Path="ElectricityText" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <infra:PositiveDoubleValidationRule />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
                                 <TextBlock Text="Амортизация (тг/час):"/>
-                                <TextBox Margin="0,2,0,5" Text="{Binding AmortizationText, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Margin="0,2,0,5">
+                                    <TextBox.Text>
+                                        <Binding Path="AmortizationText" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>
@@ -50,7 +99,15 @@
                     <GroupBox Header="Торговая наценка" Padding="10">
                         <StackPanel>
                             <TextBlock Text="Наценка на металл (%):"/>
-                            <TextBox Margin="0,5,0,5" FontWeight="Bold" Text="{Binding MaterialMarkupText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,5,0,5" FontWeight="Bold">
+                                <TextBox.Text>
+                                    <Binding Path="MaterialMarkupText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
                             <TextBlock Text="Пример: Если закуп 355 тг, а наценка 30%, продаем по 461 тг."
                                        FontSize="10" Foreground="Gray" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -61,22 +118,90 @@
                 </StackPanel>
             </TabItem>
 
+            <!-- ✅ НОВАЯ ВКЛАДКА: ЛАЗЕР -->
+            <TabItem Header="🔥 Лазер">
+                <StackPanel Margin="10">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+                        <Button Content="Добавить профиль" Command="{Binding AddLaserProfileCommand}" Margin="0,0,5,0"/>
+                        <Button Content="Удалить" Command="{Binding RemoveLaserProfileCommand}" CommandParameter="{Binding SelectedLaserProfile}"/>
+                    </StackPanel>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ListBox Grid.Column="0" ItemsSource="{Binding LaserProfiles}" SelectedItem="{Binding SelectedLaserProfile}" DisplayMemberPath="Thickness"/>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <TextBlock Text="Толщина (мм):"/>
+                            <TextBox Text="{Binding SelectedLaserProfile.Thickness, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="Газ (Air/Oxygen):" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding SelectedLaserProfile.GasType, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="Скорость резки (м/мин):" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding SelectedLaserProfile.CuttingSpeed, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="Цена пробивки (тг):" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding SelectedLaserProfile.PiercePrice, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="Наценка (%) :" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding SelectedLaserProfile.MarkupCoefficient, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </TabItem>
+
             <!-- ✅ НОВАЯ ВКЛАДКА: КИСЛОРОД -->
             <TabItem Header="💨 Кислород">
                 <StackPanel Margin="10">
                     <GroupBox Header="Параметры баллона" Padding="10">
                         <StackPanel>
                             <TextBlock Text="Объем баллона (литров):"/>
-                            <TextBox Margin="0,5,0,10" Text="{Binding OxygenVolumeText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,5,0,10">
+                                <TextBox.Text>
+                                    <Binding Path="OxygenVolumeText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
                             
                             <TextBlock Text="Давление в баллоне (атмосфер):"/>
-                            <TextBox Margin="0,5,0,10" Text="{Binding OxygenPressureText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,5,0,10">
+                                <TextBox.Text>
+                                    <Binding Path="OxygenPressureText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
                             
                             <TextBlock Text="Расход при резке (л/мин):"/>
-                            <TextBox Margin="0,5,0,10" Text="{Binding OxygenFlowText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,5,0,10">
+                                <TextBox.Text>
+                                    <Binding Path="OxygenFlowText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
                             
                             <TextBlock Text="Стоимость заправки (тг):"/>
-                            <TextBox Margin="0,5,0,10" FontWeight="Bold" Text="{Binding OxygenPriceText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,5,0,10" FontWeight="Bold">
+                                <TextBox.Text>
+                                    <Binding Path="OxygenPriceText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
                         </StackPanel>
                     </GroupBox>
 
@@ -90,13 +215,37 @@
                     <GroupBox Header="Параметры резки" Padding="10" Margin="0,10,0,0">
                         <StackPanel>
                             <TextBlock Text="Наладка лазера (тг/заказ):"/>
-                            <TextBox Margin="0,2,0,10" Text="{Binding LaserSetupText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,2,0,10">
+                                <TextBox.Text>
+                                    <Binding Path="LaserSetupText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
 
                             <TextBlock Text="Минимальная стоимость резки (тг/заказ):"/>
-                            <TextBox Margin="0,2,0,10" Text="{Binding LaserMinChargeText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,2,0,10">
+                                <TextBox.Text>
+                                    <Binding Path="LaserMinChargeText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
 
                             <TextBlock Text="Время пробивки (сек):"/>
-                            <TextBox Margin="0,2,0,10" Text="{Binding PierceTimeText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Margin="0,2,0,10">
+                                <TextBox.Text>
+                                    <Binding Path="PierceTimeText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
                         </StackPanel>
                     </GroupBox>
 

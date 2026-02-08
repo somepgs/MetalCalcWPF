@@ -7,20 +7,22 @@ namespace MetalCalcWPF.Services
     // Класс для результата (Чек)
     public class CalculationResult
     {
-        public double MaterialCost { get; set; }  // Цена металла
-        public double LaserCost { get; set; }     // Цена резки
-        public double BendingCost { get; set; }   // Цена гибки
-        public double WeldingCost { get; set; }   // Цена сварки
+        public decimal MaterialCost { get; set; }  // Цена металла
+        public decimal LaserCost { get; set; }     // Цена резки
+        public decimal BendingCost { get; set; }   // Цена гибки
+        public decimal WeldingCost { get; set; }   // Цена сварки
 
-        public double TotalPrice => MaterialCost + LaserCost + BendingCost + WeldingCost;
+        public decimal TotalPrice => MaterialCost + LaserCost + BendingCost + WeldingCost;
 
         public string Log { get; set; }           // История (что посчитали)
 
         // ✅ НОВОЕ: Детализация расчета лазера
         public string LaserDetails { get; set; }  // Подробности расчета лазера
+    
     }
 
-    public class CalculationService
+    // CalculationService implements the ICalculationService defined in Services.Interfaces
+    public class CalculationService : ICalculationService
     {
         private readonly IDatabaseService _db;
 
@@ -70,12 +72,12 @@ namespace MetalCalcWPF.Services
                 double totalWeightKg = weightKgPerPart * quantity;
 
                 // Цена закупа — используем значение из справочника (убираем хардкод)
-                double costPricePerKg = material.BasePricePerKg;
+                decimal costPricePerKg = material.BasePricePerKg;
 
                 // Цена продажи = Закуп * (1 + Наценка%)
-                double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
+                decimal sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100m);
 
-                result.MaterialCost = totalWeightKg * sellPricePerKg;
+                result.MaterialCost = (decimal)totalWeightKg * sellPricePerKg;
 
                 logBuilder += hasMeasuredWeight
                     ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
@@ -107,59 +109,59 @@ namespace MetalCalcWPF.Services
                     bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
 
                     // В. Стоимость часа работы станка (ЗП + Свет + Амортизация)
-                    double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
+                    decimal machineCostPerHour = settings.GetHourlyBaseCost(isAir);
 
                     // ✅ НОВЫЙ РАСЧЕТ КИСЛОРОДА (ТОЧНЫЙ) — используем метод настроек
-                    double oxygenCost = 0;
+                    decimal oxygenCost = 0m;
                     if (!isAir)
                     {
-                        double oxygenCostPerMinute = settings.GetOxygenCostPerMinute();
-                        oxygenCost = oxygenCostPerMinute * cuttingTimeMinutes * quantity;
+                        decimal oxygenCostPerMinute = settings.GetOxygenCostPerMinute();
+                        oxygenCost = oxygenCostPerMinute * (decimal)cuttingTimeMinutes * quantity;
                     }
 
                     // Г. Себестоимость резки = Время * Тариф
-                    double costPrice = cuttingTimeHours * machineCostPerHour;
+                    decimal costPrice = (decimal)cuttingTimeHours * machineCostPerHour;
 
                     // Учитываем время пробивок в себестоимости: пробивки занимают время и потребляют ресурс
                     double pierceTimeMinutes = (piercesCount * settings.PierceTimeSeconds) / 60.0;
-                    double pierceCost = pierceTimeMinutes * machineCostPerHour;
+                    decimal pierceCost = (decimal)pierceTimeMinutes * machineCostPerHour;
 
-                    double costPriceWithPierces = costPrice + pierceCost;
+                    decimal costPriceWithPierces = costPrice + pierceCost;
 
                     // Д. Цена для клиента = Себестоимость с наценкой (MarkupCoefficient задан в процентах).
                     // Интерпретируем значение как % наценки (например 150 => +150% => итог = cost * (1 + 150/100) = cost * 2.5).
 
                     // Добавляем наладку и минимальную цену за заказ
-                    double priceForCutting = costPriceWithPierces * (1 + profile.MarkupCoefficient / 100.0);
+                    decimal priceForCutting = costPriceWithPierces * (1 + (decimal)profile.MarkupCoefficient / 100m);
                     priceForCutting += settings.LaserSetupCostPerJob / Math.Max(1, quantity); // распределяем наладку на детали
                     if (priceForCutting * quantity < settings.LaserMinChargePerJob)
                     {
                         // Если итог по заказу меньше минимума, выставляем минимум (распределяем на деталь)
-                        priceForCutting = settings.LaserMinChargePerJob / (double)Math.Max(1, quantity);
+                        priceForCutting = settings.LaserMinChargePerJob / (decimal)Math.Max(1, quantity);
                     }
 
                     // ✅ НОВЫЙ РАСЧЕТ ПРОБИВОК (цена за пробивку из профиля * количество пробивок на деталь)
-                    double priceForPierces = profile.PiercePrice * piercesCount;
+                    decimal priceForPierces = (decimal)profile.PiercePrice * piercesCount;
 
                     // Обновляем лог себестоимости с учётом пробивок
                     costPrice = costPriceWithPierces;
 
                     // Е. Сложность (Кувалда)
-                    double handlingExtra = 0;
+                    decimal handlingExtra = 0m;
                     if (thicknessMm > settings.HeavyMaterialThresholdMm)
                         handlingExtra = settings.HeavyHandlingCostPerDetail;
 
                     // Итого за 1 деталь
-                    double laserTotalPerOne = priceForCutting + priceForPierces + handlingExtra + (oxygenCost / quantity);
+                    decimal laserTotalPerOne = priceForCutting + priceForPierces + handlingExtra + (oxygenCost / Math.Max(1, quantity));
 
                     result.LaserCost = laserTotalPerOne * quantity;
 
                     // ✅ НОВОЕ: Детализация для отладки
                     result.LaserDetails =
                         $"cutLen={laserLengthMeters}m; speed={profile.CuttingSpeed}m/min; time={Math.Round(cuttingTimeMinutes,2)}min ({Math.Round(cuttingTimeHours,4)}h) | " +
-                        $"machineRate={Math.Round(machineCostPerHour):N0}₸/h; baseCost={Math.Round(costPrice,2)}₸ | " +
-                        $"cutPrice(one)={Math.Round(priceForCutting,2)}₸; pierce(one)={Math.Round(priceForPierces,2)}₸ ({piercesCount}шт) | " +
-                        $"oxygenTotal={Math.Round(oxygenCost):N0}₸; handling(one)={Math.Round(handlingExtra,2)}₸";
+                        $"machineRate={Math.Round(machineCostPerHour):N0} тг/ч; baseCost={Math.Round(costPrice,2)} тг | " +
+                        $"cutPrice(one)={Math.Round((double)priceForCutting,2)} тг; pierce(one)={Math.Round((double)priceForPierces,2)} тг ({piercesCount}шт) | " +
+                        $"oxygenTotal={Math.Round((double)oxygenCost):N0} тг; handling(one)={Math.Round((double)handlingExtra,2)} тг";
 
                     logBuilder += $"+ Laser({piercesCount}x pierce) ";
                 }
@@ -169,24 +171,24 @@ namespace MetalCalcWPF.Services
             if (useBending && bendsCount > 0)
             {
                 var bendProfile = _db.GetBendingProfile(thicknessMm);
-                double bendPriceTotal = 0;
+                decimal bendPriceTotal = 0m;
 
                 if (bendProfile != null)
                 {
                     // Цена за 1 гиб (по длине)
-                    double pricePerBend = 0;
+                    decimal pricePerBend = 0m;
                     if (bendLengthMm <= 1500)
-                        pricePerBend = bendProfile.PriceLen1500;
+                        pricePerBend = (decimal)bendProfile.PriceLen1500;
                     else if (bendLengthMm <= 3000)
-                        pricePerBend = bendProfile.PriceLen3000;
+                        pricePerBend = (decimal)bendProfile.PriceLen3000;
                     else
-                        pricePerBend = bendProfile.PriceLen6000;
+                        pricePerBend = (decimal)bendProfile.PriceLen6000;
 
                     // Работа: Гибы * Цена * Кол-во деталей
-                    double workCost = bendsCount * pricePerBend * quantity;
+                    decimal workCost = bendsCount * pricePerBend * quantity;
 
                     // Наладка: Одна на всю партию
-                    double setupCost = bendProfile.SetupPrice;
+                    decimal setupCost = (decimal)bendProfile.SetupPrice;
 
                     bendPriceTotal = workCost + setupCost;
                     logBuilder += $"+ Bend({bendsCount}x) ";
@@ -203,7 +205,7 @@ namespace MetalCalcWPF.Services
             // --- 4. СВАРКА (Welding) ---
             if (useWelding && weldLengthCm > 0)
             {
-                double weldTotal = weldLengthCm * settings.WeldingCostPerCm * quantity;
+                decimal weldTotal = (decimal)weldLengthCm * settings.WeldingCostPerCm * quantity;
                 result.WeldingCost = weldTotal;
                 logBuilder += $"+ Weld({weldLengthCm}cm) ";
             }

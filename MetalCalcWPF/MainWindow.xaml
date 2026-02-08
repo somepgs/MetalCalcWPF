@@ -4,6 +4,26 @@
         Title="Управление цехом (Laser Manager)" Height="650" Width="1000" WindowStartupLocation="CenterScreen">
 
     <Grid Margin="10">
+        <Grid.Resources>
+            <Style TargetType="TextBox">
+                <Setter Property="Validation.ErrorTemplate">
+                    <Setter.Value>
+                        <ControlTemplate>
+                            <DockPanel>
+                                <Border BorderBrush="Red" BorderThickness="1">
+                                    <AdornedElementPlaceholder/>
+                                </Border>
+                            </DockPanel>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="Validation.HasError" Value="true">
+                        <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors)[0].ErrorContent}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Resources>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="380"/>
             <ColumnDefinition Width="*"/>
@@ -39,11 +59,25 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,5,0">
                             <TextBlock Text="Толщина (мм):" FontWeight="Bold"/>
-                            <TextBox Height="25" Margin="0,5,0,0" Text="{Binding ThicknessText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding ThicknessText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="мм" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="5,0,0,0">
                             <TextBlock Text="Количество (шт):" FontWeight="Bold"/>
-                            <TextBox Height="25" Margin="0,5,0,0" Text="{Binding QuantityText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding QuantityText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="шт" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                         </StackPanel>
                     </Grid>
 
@@ -57,19 +91,40 @@
 
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Ширина X:" FontSize="10" Foreground="Gray"/>
-                            <TextBox Height="25" Text="{Binding WidthText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding WidthText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="мм" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                         </StackPanel>
 
                         <TextBlock Grid.Column="1" Text="x" VerticalAlignment="Bottom" Margin="10,0,10,5" FontWeight="Bold"/>
 
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Высота Y:" FontSize="10" Foreground="Gray"/>
-                            <TextBox Height="25" Text="{Binding HeightText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding HeightText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="мм" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                         </StackPanel>
                     </Grid>
 
                     <TextBlock Text="Масса (кг):" FontWeight="Bold" Margin="0,10,0,0"/>
-                    <TextBox Height="25" Margin="0,5,0,0" Text="{Binding WeightText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <Grid Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="40" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Height="25" Grid.Column="0" Text="{Binding WeightText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                        <TextBlock Grid.Column="1" Text="кг" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                    </Grid>
                     <TextBlock Text="Если известна масса партии, укажите её — габариты можно оставить пустыми."
                                FontSize="10" Foreground="Gray" TextWrapping="Wrap"/>
                 </StackPanel>
@@ -77,12 +132,26 @@
                 <TabControl Grid.Row="2" Margin="0,0,0,10">
                     <TabItem Header="🔥 Лазер">
                         <StackPanel Margin="10">
-                            <TextBlock Text="Длина контура (метров):"/>
-                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding LaserLengthText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="Длина контура:"/>
+                            <Grid Margin="0,5,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding LaserLengthText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="м" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                             
                             <!-- ✅ НОВОЕ ПОЛЕ -->
                             <TextBlock Text="Количество отверстий (пробивок):"/>
-                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding PiercesCountText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid Margin="0,5,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding PiercesCountText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="шт" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                             
                             <TextBlock Text="Длина реза одной детали + количество пробивок влияют на стоимость" 
                                        FontSize="10" Foreground="Gray" TextWrapping="Wrap"/>
@@ -94,10 +163,24 @@
                             <CheckBox Content="Учитывать гибку в расчете" IsChecked="{Binding UseBending}" FontWeight="Bold" Margin="0,0,0,10"/>
 
                             <TextBlock Text="Количество гибов (на 1 деталь):"/>
-                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding BendsCountText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Grid Margin="0,5,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding BendsCountText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="шт" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
 
-                            <TextBlock Text="Длина линии гиба (мм):"/>
-                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding BendLengthText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="Длина линии гиба:"/>
+                            <Grid Margin="0,5,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding BendLengthText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="мм" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                             <TextBlock Text="Влияет на стоимость (до 1.5м / до 3м / до 6м)" FontSize="10" Foreground="Gray" Margin="0,-5,0,10"/>
 
                             <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5" Background="#F0F0F0" Margin="0,10,0,0">
@@ -111,8 +194,15 @@
 
                     <TabItem Header="🏗️ Сварка">
                         <StackPanel Margin="10">
-                            <TextBlock Text="Длина шва (см):"/>
-                            <TextBox Height="25" Margin="0,5,0,10" Text="{Binding WeldLengthText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="Длина шва:"/>
+                            <Grid Margin="0,5,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Height="25" Grid.Column="0" Text="{Binding WeldLengthText, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"/>
+                                <TextBlock Grid.Column="1" Text="см" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"/>
+                            </Grid>
                             <CheckBox Content="Учитывать сварку" IsChecked="{Binding UseWelding}" FontWeight="Bold"/>
                         </StackPanel>
                     </TabItem>
@@ -122,6 +212,7 @@
                     <Button Content="Рассчитать всё" Height="45" Command="{Binding CalculateCommand}" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
                     <TextBlock Text="{Binding ResultText}" FontSize="26" FontWeight="Bold" Margin="0,15,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding ResultDetails}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                    <TextBlock Text="{Binding ValidationMessage}" FontSize="12" Foreground="DarkRed" TextWrapping="Wrap" Margin="0,8,0,0" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Border>

@@ -15,8 +15,9 @@ namespace MetalCalcWPF
             IMessageService messageService = new MessageService();
             IFileDialogService fileDialogService = new FileDialogService();
             IWindowService windowService = new WindowService(databaseService, messageService);
+            var calculationService = new CalculationService(databaseService);
 
-            DataContext = new MainViewModel(databaseService, windowService, fileDialogService, messageService);
+            DataContext = new MainViewModel(databaseService, windowService, fileDialogService, messageService, calculationService);
         }
     }
 }

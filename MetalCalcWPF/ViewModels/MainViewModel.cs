@@ -10,10 +10,10 @@ using MetalCalcWPF.Utilities;
 
 namespace MetalCalcWPF.ViewModels
 {
-    public class MainViewModel : ViewModelBase
+    public class MainViewModel : ViewModelBase, System.ComponentModel.IDataErrorInfo
     {
         private readonly IDatabaseService _databaseService;
-        private readonly CalculationService _calculator;
+        private readonly ICalculationService _calculator;
         private readonly IWindowService _windowService;
         private readonly IFileDialogService _fileDialogService;
         private readonly IMessageService _messageService;
@@ -35,18 +35,20 @@ namespace MetalCalcWPF.ViewModels
         private OrderHistory? _selectedHistory;
         private string _resultText = "Итого: 0 ₸";
         private string _resultDetails = string.Empty;
+        private string _validationMessage = string.Empty;
 
         public MainViewModel(
             IDatabaseService databaseService,
             IWindowService windowService,
             IFileDialogService fileDialogService,
-            IMessageService messageService)
+            IMessageService messageService,
+            ICalculationService calculationService)
         {
             _databaseService = databaseService;
             _windowService = windowService;
             _fileDialogService = fileDialogService;
             _messageService = messageService;
-            _calculator = new CalculationService(_databaseService);
+            _calculator = calculationService;
 
             Materials = new ObservableCollection<MaterialType>(_databaseService.GetMaterials());
             History = new ObservableCollection<OrderHistory>(_databaseService.GetRecentOrders());
@@ -58,6 +60,28 @@ namespace MetalCalcWPF.ViewModels
             ExportToExcelCommand = new RelayCommand(_ => ExportToExcel());
             OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
             OpenDatabaseCommand = new RelayCommand(_ => OpenDatabaseEditor());
+
+            // Автоматическая валидация при изменении полей
+            PropertyChanged += (s, e) =>
+            {
+                // Validate a subset of properties live
+                if (e.PropertyName == nameof(ThicknessText) ||
+                    e.PropertyName == nameof(QuantityText) ||
+                    e.PropertyName == nameof(WidthText) ||
+                    e.PropertyName == nameof(HeightText) ||
+                    e.PropertyName == nameof(WeightText) ||
+                    e.PropertyName == nameof(LaserLengthText) ||
+                    e.PropertyName == nameof(PiercesCountText) ||
+                    e.PropertyName == nameof(UseBending) ||
+                    e.PropertyName == nameof(BendsCountText) ||
+                    e.PropertyName == nameof(BendLengthText) ||
+                    e.PropertyName == nameof(UseWelding) ||
+                    e.PropertyName == nameof(WeldLengthText) ||
+                    e.PropertyName == nameof(SelectedMaterial))
+                {
+                    ValidateAll();
+                }
+            };
         }
 
         public ObservableCollection<MaterialType> Materials { get; }
@@ -172,6 +196,12 @@ namespace MetalCalcWPF.ViewModels
             set => SetProperty(ref _resultDetails, value);
         }
 
+        public string ValidationMessage
+        {
+            get => _validationMessage;
+            set => SetProperty(ref _validationMessage, value);
+        }
+
         public RelayCommand CalculateCommand { get; }
         public RelayCommand DeleteOrderCommand { get; }
         public RelayCommand DeleteOrderByParamCommand { get; }
@@ -183,16 +213,16 @@ namespace MetalCalcWPF.ViewModels
         {
             try
             {
-                // Валидация основных полей
-                if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
-                {
-                    _messageService.ShowError("Укажите корректную толщину металла!");
-                    return;
-                }
+                // Очистим предыдущие сообщения валидации
+                ValidationMessage = string.Empty;
 
-                if (SelectedMaterial == null)
+                // Валидация основных полей
+                var validation = ValidateAll();
+                if (!validation.IsValid)
                 {
-                    _messageService.ShowError("Выберите материал!");
+                    // Отображаем подробности в UI и через MessageService
+                    ValidationMessage = validation.Message;
+                    _messageService.ShowError(validation.Message);
                     return;
                 }
 
@@ -432,6 +462,116 @@ namespace MetalCalcWPF.ViewModels
                 }
             }
             return defaultValue;
+        }
+
+        private (bool IsValid, string Message) ValidateAll()
+        {
+            // Thickness
+            if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
+                return (false, "Укажите корректную толщину металла (мм > 0).");
+
+            // Material
+            if (SelectedMaterial == null)
+                return (false, "Выберите материал.");
+
+            // Quantity
+            int q = ConvertToInt(QuantityText, -1);
+            if (q <= 0) return (false, "Количество должно быть целым положительным (шт).");
+
+            // Dimensions or weight
+            double width = ParseDouble(WidthText);
+            double height = ParseDouble(HeightText);
+            double weight = ParseDouble(WeightText);
+            if (weight <= 0 && (width <= 0 || height <= 0))
+                return (false, "Укажите массу партии или габариты детали (ширина и высота).");
+
+            // Laser length and profile check
+            double laserLen = ParseDouble(LaserLengthText);
+            if (laserLen > 0)
+            {
+                var profile = _databaseService.GetProfileByThickness(ParseDouble(ThicknessText));
+                if (profile == null) return (false, "Нет профиля резки для выбранной толщины.");
+                if (profile.CuttingSpeed <= 0) return (false, "Скорость резки в профиле должна быть > 0.");
+            }
+
+            // Pierces
+            int pierces = ConvertToInt(PiercesCountText, 0);
+            if (pierces < 0) return (false, "Количество пробивок должно быть >= 0.");
+
+            // Bending
+            if (UseBending)
+            {
+                int bends = ConvertToInt(BendsCountText, 0);
+                if (bends <= 0) return (false, "Укажите количество гибов (больше 0) или отключите гибку.");
+                if (ParseDouble(BendLengthText) <= 0) return (false, "Укажите общую длину гиба в мм.");
+            }
+
+            // Welding
+            if (UseWelding)
+            {
+                if (ParseDouble(WeldLengthText) <= 0) return (false, "Укажите длину шва в см или отключите сварку.");
+            }
+
+            return (true, string.Empty);
+        }
+
+        // IDataErrorInfo implementation for WPF field-level validation
+        public string Error => null;
+
+        public string this[string columnName]
+        {
+            get
+            {
+                try
+                {
+                    switch (columnName)
+                    {
+                        case nameof(ThicknessText):
+                            if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
+                                return "Толщина должна быть числом > 0 мм";
+                            break;
+                        case nameof(QuantityText):
+                            if (ConvertToInt(QuantityText, -1) <= 0)
+                                return "Количество должно быть целым положительным";
+                            break;
+                        case nameof(WidthText):
+                        case nameof(HeightText):
+                            // validate only if weight not provided
+                            if (ParseDouble(WeightText) <= 0 && (ParseDouble(WidthText) <= 0 || ParseDouble(HeightText) <= 0))
+                                return "Укажите массу партии или заполните ширину и высоту в мм";
+                            break;
+                        case nameof(WeightText):
+                            if (ParseDouble(WeightText) < 0)
+                                return "Масса не может быть отрицательной";
+                            break;
+                        case nameof(LaserLengthText):
+                            if (ParseDouble(LaserLengthText) > 0)
+                            {
+                                var profile = _databaseService.GetProfileByThickness(ParseDouble(ThicknessText));
+                                if (profile == null) return "Нет профиля резки для выбранной толщины";
+                                if (profile.CuttingSpeed <= 0) return "Скорость резки в профиле должна быть > 0";
+                            }
+                            break;
+                        case nameof(PiercesCountText):
+                            if (ConvertToInt(PiercesCountText, -1) < 0) return "Количество пробивок должно быть >= 0";
+                            break;
+                        case nameof(BendsCountText):
+                            if (UseBending && ConvertToInt(BendsCountText, -1) <= 0) return "Укажите количество гибов (>0)";
+                            break;
+                        case nameof(BendLengthText):
+                            if (UseBending && ParseDouble(BendLengthText) <= 0) return "Укажите длину гиба в мм";
+                            break;
+                        case nameof(WeldLengthText):
+                            if (UseWelding && ParseDouble(WeldLengthText) <= 0) return "Укажите длину шва в см";
+                            break;
+                        case nameof(SelectedMaterial):
+                            if (SelectedMaterial == null) return "Выберите материал";
+                            break;
+                    }
+                }
+                catch { }
+                return string.Empty;
+            }
         }
     }
 }

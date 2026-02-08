@@ -8,19 +8,19 @@ namespace MetalCalcWPF.Models
         public int Id { get; set; }
 
         // --- 1. ОБЩИЕ и ЛАЗЕР ---
-        public double ElectricityPricePerKw { get; set; } = 25;
+        public decimal ElectricityPricePerKw { get; set; } = 25m;
 
         // Оператор ЛАЗЕРА
-        public double OperatorMonthlySalary { get; set; } = 300000;
+        public decimal OperatorMonthlySalary { get; set; } = 300000m;
         public int WorkDaysPerMonth { get; set; } = 26;
         public int WorkHoursPerDay { get; set; } = 8;
 
-        public double OxygenBottlePrice { get; set; } = 5000; // ✅ ОБНОВЛЕНО: 5000 тенге
-        public double AmortizationPerHour { get; set; } = 650;
+        public decimal OxygenBottlePrice { get; set; } = 5000m; // ✅ ОБНОВЛЕНО: 5000 тенге
+        public decimal AmortizationPerHour { get; set; } = 650m;
 
         // Дополнительные настройки для лазера
-        public double LaserSetupCostPerJob { get; set; } = 1000; // Наладка за партию
-        public double LaserMinChargePerJob { get; set; } = 500;   // Минимальная стоимость резки за заказ
+        public decimal LaserSetupCostPerJob { get; set; } = 1000m; // Наладка за партию
+        public decimal LaserMinChargePerJob { get; set; } = 500m;   // Минимальная стоимость резки за заказ
         public double PierceTimeSeconds { get; set; } = 5;        // Время на 1 пробивку (сек)
 
         // ✅ НОВЫЕ ПАРАМЕТРЫ КИСЛОРОДА
@@ -30,7 +30,7 @@ namespace MetalCalcWPF.Models
 
         // Сложность (Кувалда)
         public double HeavyMaterialThresholdMm { get; set; } = 20.0;
-        public double HeavyHandlingCostPerDetail { get; set; } = 500;
+        public decimal HeavyHandlingCostPerDetail { get; set; } = 500m;
 
         // Мощность Лазера
         public double LaserBasePowerConsumption { get; set; } = 28.0;
@@ -38,58 +38,68 @@ namespace MetalCalcWPF.Models
         public double CompressorActivePower { get; set; } = 22.0;
 
         // --- 2. ЛИСТОГИБ (Bodor 600T) ---
-        public double BendingOperatorSalary { get; set; } = 450000;
+        public decimal BendingOperatorSalary { get; set; } = 450000m;
         public double BendingMachinePower { get; set; } = 45.0;
         public double MaxBendingLengthMm { get; set; } = 6000;
 
-        public double BendingSetupPrice { get; set; } = 1000; // Резерв
-        public double BendingBasePrice { get; set; } = 50;    // Резерв
+        public decimal BendingSetupPrice { get; set; } = 1000m; // Резерв
+        public decimal BendingBasePrice { get; set; } = 50m;    // Резерв
 
         // --- 3. СВАРКА ---
-        public double WeldingCostPerCm { get; set; } = 20;
+        public decimal WeldingCostPerCm { get; set; } = 20m;
 
         // --- 4. МАТЕРИАЛЫ ---
-        public double MaterialMarkupPercent { get; set; } = 30.0;
+        public decimal MaterialMarkupPercent { get; set; } = 30.0m;
 
         // --- МЕТОДЫ РАСЧЕТА ---
 
         // Стоимость часа ЛАЗЕРА
-        public double GetHourlyBaseCost(bool isAirCutting)
+        public decimal GetHourlyBaseCost(bool isAirCutting)
         {
             double totalHours = WorkDaysPerMonth * WorkHoursPerDay;
             if (totalHours == 0) totalHours = 1;
-            double salaryPerHour = OperatorMonthlySalary / totalHours;
+            decimal salaryPerHour = OperatorMonthlySalary / (decimal)totalHours;
 
             double totalPower = isAirCutting
                 ? (LaserBasePowerConsumption + CompressorActivePower)
                 : (LaserBasePowerConsumption + CompressorIdlePower);
 
-            return salaryPerHour + (totalPower * ElectricityPricePerKw) + AmortizationPerHour;
+            decimal totalPowerDec = (decimal)totalPower;
+
+            return salaryPerHour + (totalPowerDec * ElectricityPricePerKw) + AmortizationPerHour;
         }
 
         // Стоимость часа ЛИСТОГИБА
-        public double GetBendingHourlyCost()
+        public decimal GetBendingHourlyCost()
         {
             double totalHours = WorkDaysPerMonth * WorkHoursPerDay;
             if (totalHours == 0) totalHours = 1;
-
-            double salaryPerHour = BendingOperatorSalary / totalHours;
-            double powerCost = BendingMachinePower * ElectricityPricePerKw;
+            decimal salaryPerHour = BendingOperatorSalary / (decimal)totalHours;
+            decimal powerCost = (decimal)BendingMachinePower * ElectricityPricePerKw;
 
             return salaryPerHour + powerCost + AmortizationPerHour;
         }
 
         // ✅ НОВЫЙ МЕТОД: Расчет стоимости кислорода за минуту работы
-        public double GetOxygenCostPerMinute()
+        public decimal GetOxygenCostPerMinute()
         {
             // Общий объем кислорода в баллоне (литры при атмосферном давлении)
             double totalOxygenLiters = OxygenBottleVolumeLiters * OxygenBottlePressureAtm;
+            // Защита от некорректных значений
+            if (OxygenFlowRateLpm <= 0 || totalOxygenLiters <= 0)
+            {
+                return 0.0m;
+            }
 
             // Время работы одного баллона (минуты)
             double bottleWorkTimeMinutes = totalOxygenLiters / OxygenFlowRateLpm;
 
+            if (double.IsInfinity(bottleWorkTimeMinutes) || bottleWorkTimeMinutes <= 0)
+                return 0.0m;
+
             // Цена за минуту
-            return OxygenBottlePrice / bottleWorkTimeMinutes;
+            var costPerMinute = OxygenBottlePrice / (decimal)bottleWorkTimeMinutes;
+            return costPerMinute;
         }
     }
 }

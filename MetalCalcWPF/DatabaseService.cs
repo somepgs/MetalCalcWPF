@@ -105,9 +105,9 @@ namespace MetalCalcWPF
                     var materials = new System.Collections.Generic.List<MaterialType>
                     {
                         // Плотность стали ~7.85 г/см3
-                        new MaterialType { Name = "Черная сталь (Ст3)", Density = 7.85, BasePricePerKg = 355 },
-                        new MaterialType { Name = "Оцинковка", Density = 7.85, BasePricePerKg = 450 },     // Примерная цена
-                        new MaterialType { Name = "Нержавейка (AISI 304)", Density = 7.9, BasePricePerKg = 2500 } // Примерная цена
+                        new MaterialType { Name = "Черная сталь (Ст3)", Density = 7.85, BasePricePerKg = 355m },
+                        new MaterialType { Name = "Оцинковка", Density = 7.85, BasePricePerKg = 450m },     // Примерная цена
+                        new MaterialType { Name = "Нержавейка (AISI 304)", Density = 7.9, BasePricePerKg = 2500m } // Примерная цена
                     };
                     db.InsertAll(materials);
                 }
