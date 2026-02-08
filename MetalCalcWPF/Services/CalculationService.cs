@@ -33,7 +33,7 @@ namespace MetalCalcWPF.Services
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
-            double measuredWeightKg = 0)
+            double measuredWeightKg)
         {
             var result = new CalculationResult();
             var settings = _db.GetSettings();
