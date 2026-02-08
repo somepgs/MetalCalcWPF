@@ -67,6 +67,11 @@
                             <TextBox Height="25" Text="{Binding HeightText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                     </Grid>
+
+                    <TextBlock Text="Масса (кг):" FontWeight="Bold" Margin="0,10,0,0"/>
+                    <TextBox Height="25" Margin="0,5,0,0" Text="{Binding WeightText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Если известна масса партии, укажите её — габариты можно оставить пустыми."
+                               FontSize="10" Foreground="Gray" TextWrapping="Wrap"/>
                 </StackPanel>
 
                 <TabControl Grid.Row="2" Margin="0,0,0,10">
