@@ -23,6 +23,7 @@ namespace MetalCalcWPF.ViewModels
         private string _quantityText = "1";
         private string _widthText = string.Empty;
         private string _heightText = string.Empty;
+        private string _weightText = string.Empty; // ✅ Добавлено поле для ввода веса
         private string _laserLengthText = string.Empty;
         private bool _useBending;
         private string _bendsCountText = "0";
@@ -58,7 +59,6 @@ namespace MetalCalcWPF.ViewModels
         }
 
         public ObservableCollection<MaterialType> Materials { get; }
-
         public ObservableCollection<OrderHistory> History { get; }
 
         public string ClientName
@@ -89,6 +89,12 @@ namespace MetalCalcWPF.ViewModels
         {
             get => _heightText;
             set => SetProperty(ref _heightText, value);
+        }
+
+        public string WeightText // ✅ Добавлено свойство
+        {
+            get => _weightText;
+            set => SetProperty(ref _weightText, value);
         }
 
         public string LaserLengthText
@@ -167,34 +173,47 @@ namespace MetalCalcWPF.ViewModels
         {
             try
             {
+                // ✅ Валидация
+                if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
+                {
+                    _messageService.ShowError("Укажите корректную толщину металла!");
+                    return;
+                }
+
+                if (SelectedMaterial == null)
+                {
+                    _messageService.ShowError("Выберите материал!");
+                    return;
+                }
+
                 var clientName = string.IsNullOrWhiteSpace(ClientName) ? "Без названия" : ClientName;
 
                 double thicknessMm = ParseDouble(ThicknessText);
                 int quantity = (int)ParseDouble(QuantityText);
-                if (quantity <= 0)
-                {
-                    quantity = 1;
-                }
+                if (quantity <= 0) quantity = 1;
 
                 double widthMm = ParseDouble(WidthText);
                 double heightMm = ParseDouble(HeightText);
+                double weightKg = ParseDouble(WeightText); // ✅ Считываем вес
                 double laserLen = ParseDouble(LaserLengthText);
                 int bendsCount = (int)ParseDouble(BendsCountText);
                 double bendLenMm = ParseDouble(BendLengthText);
                 double weldCm = ParseDouble(WeldLengthText);
 
+                // ✅ Исправлен вызов - теперь передаем weightKg
                 var result = _calculator.CalculateOrder(
                     widthMm, heightMm, thicknessMm, quantity, SelectedMaterial,
                     laserLen,
                     UseBending, bendsCount, bendLenMm,
-                    UseWelding, weldCm
+                    UseWelding, weldCm,
+                    weightKg  // ✅ Передаем измеренный вес
                 );
 
-                ResultText = $"Итого: {Math.Round(result.TotalPrice)} ₸";
-                ResultDetails = $"Металл: {Math.Round(result.MaterialCost)} ₸\n" +
-                                $"Лазер: {Math.Round(result.LaserCost)} ₸\n" +
-                                $"Гибка: {Math.Round(result.BendingCost)} ₸\n" +
-                                $"Сварка: {Math.Round(result.WeldingCost)} ₸";
+                ResultText = $"Итого: {Math.Round(result.TotalPrice):N0} ₸";
+                ResultDetails = $"Металл: {Math.Round(result.MaterialCost):N0} ₸\n" +
+                                $"Лазер: {Math.Round(result.LaserCost):N0} ₸\n" +
+                                $"Гибка: {Math.Round(result.BendingCost):N0} ₸\n" +
+                                $"Сварка: {Math.Round(result.WeldingCost):N0} ₸";
 
                 if (result.TotalPrice > 0)
                 {
@@ -213,22 +232,20 @@ namespace MetalCalcWPF.ViewModels
             }
             catch (Exception ex)
             {
-                _messageService.ShowError("Ошибка: " + ex.Message);
+                _messageService.ShowError("Ошибка расчета: " + ex.Message);
             }
         }
 
         private void DeleteSelectedOrder()
         {
-            if (SelectedHistory == null)
-            {
-                return;
-            }
+            if (SelectedHistory == null) return;
 
             var result = _messageService.ShowConfirm($"Удалить заказ №{SelectedHistory.Id}?");
             if (result == System.Windows.MessageBoxResult.Yes)
             {
                 _databaseService.DeleteOrder(SelectedHistory.Id);
                 ReloadHistory();
+                _messageService.ShowInfo("Заказ удален");
             }
         }
 
@@ -248,15 +265,13 @@ namespace MetalCalcWPF.ViewModels
                     $"Отчет_{DateTime.Now:yyyy-MM-dd}.xlsx",
                     "Excel Files|*.xlsx");
 
-                if (string.IsNullOrWhiteSpace(filePath))
-                {
-                    return;
-                }
+                if (string.IsNullOrWhiteSpace(filePath)) return;
 
                 using (var workbook = new XLWorkbook())
                 {
                     var worksheet = workbook.Worksheets.Add("Заказы");
 
+                    // Заголовки
                     worksheet.Cell(1, 1).Value = "№";
                     worksheet.Cell(1, 2).Value = "Дата";
                     worksheet.Cell(1, 3).Value = "Тип";
@@ -268,6 +283,7 @@ namespace MetalCalcWPF.ViewModels
                     headerRange.Style.Font.Bold = true;
                     headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
 
+                    // Данные
                     int row = 2;
                     foreach (var item in history)
                     {
@@ -284,7 +300,7 @@ namespace MetalCalcWPF.ViewModels
                     workbook.SaveAs(filePath);
                 }
 
-                _messageService.ShowInfo("Файл успешно сохранен!");
+                _messageService.ShowInfo($"Файл успешно сохранен!\n{filePath}");
             }
             catch (Exception ex)
             {
@@ -319,7 +335,6 @@ namespace MetalCalcWPF.ViewModels
             {
                 Materials.Add(material);
             }
-
             SelectedMaterial = Materials.FirstOrDefault();
         }
 

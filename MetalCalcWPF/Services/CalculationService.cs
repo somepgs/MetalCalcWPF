@@ -26,6 +26,21 @@ namespace MetalCalcWPF.Services
             _db = db;
         }
 
+        /// <summary>
+        /// Главный метод расчета стоимости заказа
+        /// </summary>
+        /// <param name="widthMm">Ширина детали (мм)</param>
+        /// <param name="heightMm">Высота детали (мм)</param>
+        /// <param name="thicknessMm">Толщина металла (мм)</param>
+        /// <param name="quantity">Количество деталей</param>
+        /// <param name="material">Тип материала</param>
+        /// <param name="laserLengthMeters">Длина контура резки (метры)</param>
+        /// <param name="useBending">Учитывать гибку?</param>
+        /// <param name="bendsCount">Количество гибов на деталь</param>
+        /// <param name="bendLengthMm">Длина линии гиба (мм)</param>
+        /// <param name="useWelding">Учитывать сварку?</param>
+        /// <param name="weldLengthCm">Длина шва (см)</param>
+        /// <param name="measuredWeightKg">Измеренный вес партии (кг). Если 0 - рассчитывается по габаритам</param>
         public CalculationResult CalculateOrder(
             double widthMm, double heightMm, double thicknessMm,
             int quantity,
@@ -33,45 +48,7 @@ namespace MetalCalcWPF.Services
             double laserLengthMeters,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
-            double measuredWeightKg)
-        {
-            return CalculateOrder(
-                widthMm, heightMm, thicknessMm,
-                quantity,
-                material,
-                laserLengthMeters,
-                useBending, bendsCount, bendLengthMm,
-                useWelding, weldLengthCm,
-                0);
-        }
-
-        public CalculationResult CalculateOrder(
-            double widthMm, double heightMm, double thicknessMm,
-            int quantity,
-            MaterialType material,
-            double laserLengthMeters,
-            bool useBending, int bendsCount, double bendLengthMm,
-            bool useWelding, double weldLengthCm,
-            double measuredWeightKg)
-        {
-            return CalculateOrder(
-                widthMm, heightMm, thicknessMm,
-                quantity,
-                material,
-                laserLengthMeters,
-                useBending, bendsCount, bendLengthMm,
-                useWelding, weldLengthCm,
-                0);
-        }
-
-        public CalculationResult CalculateOrder(
-            double widthMm, double heightMm, double thicknessMm,
-            int quantity,
-            MaterialType? material,
-            double laserLengthMeters,
-            bool useBending, int bendsCount, double bendLengthMm,
-            bool useWelding, double weldLengthCm,
-            double measuredWeightKg)
+            double measuredWeightKg = 0)
         {
             var result = new CalculationResult();
             var settings = _db.GetSettings();
@@ -80,10 +57,25 @@ namespace MetalCalcWPF.Services
             // --- 1. МЕТАЛЛ (Material) ---
             if (((widthMm > 0 && heightMm > 0) || measuredWeightKg > 0) && material != null)
             {
-                // Вес в кг (можно задать напрямую)
-                double weightKg = measuredWeightKg > 0
-                    ? measuredWeightKg
-                    : (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
+                // Вес ОДНОЙ детали в кг
+                double weightKgPerPart;
+                bool hasMeasuredWeight = measuredWeightKg > 0;
+
+                if (hasMeasuredWeight)
+                {
+                    // Если задан общий вес партии - делим на количество
+                    weightKgPerPart = measuredWeightKg / quantity;
+                }
+                else
+                {
+                    // Иначе рассчитываем по габаритам: V = Ширина * Высота * Толщина (в мм³)
+                    // Переводим в см³ (делим на 1000) и умножаем на плотность (г/см³)
+                    // Результат в граммах делим на 1000 для получения кг
+                    weightKgPerPart = (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
+                }
+
+                // Вес всей партии
+                double totalWeightKg = weightKgPerPart * quantity;
 
                 // Цена закупа (Сетка цен для Ст3)
                 double costPricePerKg = material.BasePricePerKg;
@@ -98,6 +90,7 @@ namespace MetalCalcWPF.Services
                 double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
 
                 result.MaterialCost = totalWeightKg * sellPricePerKg; // На всю партию
+
                 logBuilder += hasMeasuredWeight
                     ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
                     : $"Metal({Math.Round(weightKgPerPart, 1)}kg x {quantity}) ";
@@ -116,7 +109,8 @@ namespace MetalCalcWPF.Services
                     bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
                     double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
 
-                    if (!isAir) machineCostPerHour += settings.OxygenBottlePrice / 4.0; // Газ
+                    if (!isAir)
+                        machineCostPerHour += settings.OxygenBottlePrice / 4.0; // Газ
 
                     // В. Себестоимость резки = Время * Тариф
                     double costPrice = cuttingTimeHours * machineCostPerHour;
@@ -149,9 +143,12 @@ namespace MetalCalcWPF.Services
                 {
                     // Цена за 1 гиб (по длине)
                     double pricePerBend = 0;
-                    if (bendLengthMm <= 1500) pricePerBend = bendProfile.PriceLen1500;
-                    else if (bendLengthMm <= 3000) pricePerBend = bendProfile.PriceLen3000;
-                    else pricePerBend = bendProfile.PriceLen6000;
+                    if (bendLengthMm <= 1500)
+                        pricePerBend = bendProfile.PriceLen1500;
+                    else if (bendLengthMm <= 3000)
+                        pricePerBend = bendProfile.PriceLen3000;
+                    else
+                        pricePerBend = bendProfile.PriceLen6000;
 
                     // Работа: Гибы * Цена * Кол-во деталей
                     double workCost = bendsCount * pricePerBend * quantity;
@@ -164,9 +161,10 @@ namespace MetalCalcWPF.Services
                 }
                 else
                 {
-                    // Резерв
+                    // Резерв (если профиль не найден)
                     bendPriceTotal = bendsCount * settings.BendingBasePrice * quantity;
                 }
+
                 result.BendingCost = bendPriceTotal;
             }
 
@@ -178,7 +176,7 @@ namespace MetalCalcWPF.Services
                 logBuilder += $"+ Weld({weldLengthCm}cm) ";
             }
 
-            result.Log = logBuilder;
+            result.Log = logBuilder.Trim();
             return result;
         }
     }
