@@ -54,6 +54,7 @@ namespace MetalCalcWPF.ViewModels
 
             CalculateCommand = new RelayCommand(_ => Calculate());
             DeleteOrderCommand = new RelayCommand(_ => DeleteSelectedOrder(), _ => SelectedHistory != null);
+            DeleteOrderByParamCommand = new RelayCommand(p => DeleteOrderByParam(p));
             ExportToExcelCommand = new RelayCommand(_ => ExportToExcel());
             OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
             OpenDatabaseCommand = new RelayCommand(_ => OpenDatabaseEditor());
@@ -173,6 +174,7 @@ namespace MetalCalcWPF.ViewModels
 
         public RelayCommand CalculateCommand { get; }
         public RelayCommand DeleteOrderCommand { get; }
+        public RelayCommand DeleteOrderByParamCommand { get; }
         public RelayCommand ExportToExcelCommand { get; }
         public RelayCommand OpenSettingsCommand { get; }
         public RelayCommand OpenDatabaseCommand { get; }
@@ -181,7 +183,7 @@ namespace MetalCalcWPF.ViewModels
         {
             try
             {
-                // Валидация
+                // Валидация основных полей
                 if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
                 {
                     _messageService.ShowError("Укажите корректную толщину металла!");
@@ -197,19 +199,64 @@ namespace MetalCalcWPF.ViewModels
                 var clientName = string.IsNullOrWhiteSpace(ClientName) ? "Без названия" : ClientName;
 
                 double thicknessMm = ParseDouble(ThicknessText);
-                int quantity = (int)ParseDouble(QuantityText);
+
+                // Количество должно быть целым положительным
+                int quantity = ConvertToInt(QuantityText, 1);
                 if (quantity <= 0) quantity = 1;
 
                 double widthMm = ParseDouble(WidthText);
                 double heightMm = ParseDouble(HeightText);
                 double weightKg = ParseDouble(WeightText);
                 double laserLen = ParseDouble(LaserLengthText);
-                int piercesCount = (int)ParseDouble(PiercesCountText); // ✅ НОВОЕ
-                if (piercesCount < 1) piercesCount = 1; // Минимум 1 пробивка
 
-                int bendsCount = (int)ParseDouble(BendsCountText);
+                // Требуем указать массу партии или габариты детали
+                if (weightKg <= 0 && (widthMm <= 0 || heightMm <= 0))
+                {
+                    _messageService.ShowError("Укажите массу партии или габариты детали (ширина и высота).");
+                    return;
+                }
+
+                // Пробивки — целое неотрицательное число
+                int piercesCount = ConvertToInt(PiercesCountText, 0);
+                if (piercesCount < 0) piercesCount = 0;
+
+                int bendsCount = ConvertToInt(BendsCountText, 0);
                 double bendLenMm = ParseDouble(BendLengthText);
                 double weldCm = ParseDouble(WeldLengthText);
+
+                // Дополнительная валидация логики
+                if (UseBending && bendsCount <= 0)
+                {
+                    _messageService.ShowError("Укажите количество гибов (больше 0) или отключите гибку.");
+                    return;
+                }
+
+                if (UseBending && bendLenMm <= 0)
+                {
+                    _messageService.ShowError("Укажите общую длину гиба в мм.");
+                    return;
+                }
+
+                if (UseWelding && weldCm <= 0)
+                {
+                    _messageService.ShowError("Укажите длину шва в см или отключите сварку.");
+                    return;
+                }
+
+                if (laserLen > 0)
+                {
+                    var profile = _databaseService.GetProfileByThickness(thicknessMm);
+                    if (profile == null)
+                    {
+                        _messageService.ShowError("Нет профиля резки для выбранной толщины. Добавьте профиль в базе.");
+                        return;
+                    }
+                    if (profile.CuttingSpeed <= 0)
+                    {
+                        _messageService.ShowError("Скорость резки в профиле должна быть больше 0. Проверьте данные профиля.");
+                        return;
+                    }
+                }
 
                 // ✅ ОБНОВЛЕННЫЙ ВЫЗОВ с количеством пробивок
                 var result = _calculator.CalculateOrder(
@@ -224,7 +271,9 @@ namespace MetalCalcWPF.ViewModels
                 ResultDetails = $"Металл: {Math.Round(result.MaterialCost):N0} ₸\n" +
                                 $"Лазер: {Math.Round(result.LaserCost):N0} ₸\n" +
                                 $"Гибка: {Math.Round(result.BendingCost):N0} ₸\n" +
-                                $"Сварка: {Math.Round(result.WeldingCost):N0} ₸";
+                                $"Сварка: {Math.Round(result.WeldingCost):N0} ₸\n\n" +
+                                // Детализация расчёта лазера (если есть)
+                                (!string.IsNullOrWhiteSpace(result.LaserDetails) ? ("Детали лазера: \n" + result.LaserDetails) : string.Empty);
 
                 if (result.TotalPrice > 0)
                 {
@@ -257,6 +306,20 @@ namespace MetalCalcWPF.ViewModels
                 _databaseService.DeleteOrder(SelectedHistory.Id);
                 ReloadHistory();
                 _messageService.ShowInfo("Заказ удален");
+            }
+        }
+
+        private void DeleteOrderByParam(object? parameter)
+        {
+            if (parameter is OrderHistory order)
+            {
+                var result = _messageService.ShowConfirm($"Удалить заказ №{order.Id}?");
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    _databaseService.DeleteOrder(order.Id);
+                    ReloadHistory();
+                    _messageService.ShowInfo("Заказ удален");
+                }
             }
         }
 
@@ -352,6 +415,23 @@ namespace MetalCalcWPF.ViewModels
         private static double ParseDouble(string? text)
         {
             return NumberParser.TryParseDouble(text, out var value) ? value : 0;
+        }
+
+        private static int ConvertToInt(string? text, int defaultValue = 0)
+        {
+            if (NumberParser.TryParseDouble(text, out var d))
+            {
+                try
+                {
+                    // Округляем вниз до целого
+                    return (int)Math.Floor(d);
+                }
+                catch
+                {
+                    return defaultValue;
+                }
+            }
+            return defaultValue;
         }
     }
 }

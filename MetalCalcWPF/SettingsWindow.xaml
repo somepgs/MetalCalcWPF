@@ -87,6 +87,19 @@
                         </StackPanel>
                     </Border>
 
+                    <GroupBox Header="Параметры резки" Padding="10" Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Наладка лазера (тг/заказ):"/>
+                            <TextBox Margin="0,2,0,10" Text="{Binding LaserSetupText, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="Минимальная стоимость резки (тг/заказ):"/>
+                            <TextBox Margin="0,2,0,10" Text="{Binding LaserMinChargeText, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Text="Время пробивки (сек):"/>
+                            <TextBox Margin="0,2,0,10" Text="{Binding PierceTimeText, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </GroupBox>
+
                     <TextBlock Text="💡 Кислород используется при резке металла толщиной 12+ мм."
                                FontSize="10" Foreground="Gray" Margin="0,10,0,0" TextWrapping="Wrap"/>
                 </StackPanel>

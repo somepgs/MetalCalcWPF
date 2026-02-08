@@ -51,28 +51,26 @@ namespace MetalCalcWPF.Services
             {
                 // Вес ОДНОЙ детали в кг
                 double weightKgPerPart;
-                bool hasMeasuredWeight = measuredWeightKg > 0;
+                bool hasMeasuredWeight = measuredWeightKg > 0 && quantity > 0;
 
-                if (hasMeasuredWeight)
+                if (hasMeasuredWeight && quantity > 0)
                 {
                     weightKgPerPart = measuredWeightKg / quantity;
                 }
                 else
                 {
-                    weightKgPerPart = (widthMm * heightMm * thicknessMm * material.Density) / 1_000_000.0;
+                    // Защита от нулевых габаритов
+                    double w = widthMm > 0 ? widthMm : 0;
+                    double h = heightMm > 0 ? heightMm : 0;
+                    double t = thicknessMm > 0 ? thicknessMm : 0;
+                    weightKgPerPart = (w * h * t * material.Density) / 1_000_000.0;
                 }
 
                 // Вес всей партии
                 double totalWeightKg = weightKgPerPart * quantity;
 
-                // Цена закупа (Сетка цен для Ст3)
+                // Цена закупа — используем значение из справочника (убираем хардкод)
                 double costPricePerKg = material.BasePricePerKg;
-                if (material.Name.Contains("Ст3"))
-                {
-                    if (thicknessMm <= 12) costPricePerKg = 355;
-                    else if (thicknessMm <= 25) costPricePerKg = 375;
-                    else costPricePerKg = 385;
-                }
 
                 // Цена продажи = Закуп * (1 + Наценка%)
                 double sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100.0);
@@ -91,8 +89,19 @@ namespace MetalCalcWPF.Services
                 if (profile != null)
                 {
                     // А. Время резки (часы)
-                    double cuttingTimeHours = (laserLengthMeters / profile.CuttingSpeed) / 60.0;
-                    double cuttingTimeMinutes = cuttingTimeHours * 60.0;
+                    double cuttingTimeMinutes = 0;
+                    double cuttingTimeHours = 0;
+                    if (profile.CuttingSpeed <= 0)
+                    {
+                        // Защита от некорректной скорости
+                        cuttingTimeMinutes = 0;
+                        cuttingTimeHours = 0;
+                    }
+                    else
+                    {
+                        cuttingTimeMinutes = (laserLengthMeters / profile.CuttingSpeed);
+                        cuttingTimeHours = cuttingTimeMinutes / 60.0;
+                    }
 
                     // Б. Определяем тип газа
                     bool isAir = profile.GasType == "Air" || profile.GasType == "Воздух";
@@ -100,37 +109,40 @@ namespace MetalCalcWPF.Services
                     // В. Стоимость часа работы станка (ЗП + Свет + Амортизация)
                     double machineCostPerHour = settings.GetHourlyBaseCost(isAir);
 
-                    // ✅ НОВЫЙ РАСЧЕТ КИСЛОРОДА (ТОЧНЫЙ)
+                    // ✅ НОВЫЙ РАСЧЕТ КИСЛОРОДА (ТОЧНЫЙ) — используем метод настроек
                     double oxygenCost = 0;
                     if (!isAir)
                     {
-                        // Параметры из настроек
-                        double oxygenBottleVolumeLiters = settings.OxygenBottleVolumeLiters; // 40 литров
-                        double oxygenBottlePressureAtm = settings.OxygenBottlePressureAtm;   // 150 атм
-                        double oxygenFlowRateLpm = settings.OxygenFlowRateLpm;               // 15 л/мин
-                        double oxygenBottlePrice = settings.OxygenBottlePrice;               // 5000 тг
-
-                        // Общий объем кислорода в баллоне при атмосферном давлении
-                        double totalOxygenLiters = oxygenBottleVolumeLiters * oxygenBottlePressureAtm;
-
-                        // Время работы одного баллона (минуты)
-                        double bottleWorkTimeMinutes = totalOxygenLiters / oxygenFlowRateLpm;
-
-                        // Цена кислорода за минуту
-                        double oxygenCostPerMinute = oxygenBottlePrice / bottleWorkTimeMinutes;
-
-                        // Стоимость кислорода для этой детали
+                        double oxygenCostPerMinute = settings.GetOxygenCostPerMinute();
                         oxygenCost = oxygenCostPerMinute * cuttingTimeMinutes * quantity;
                     }
 
                     // Г. Себестоимость резки = Время * Тариф
                     double costPrice = cuttingTimeHours * machineCostPerHour;
 
-                    // Д. Цена для клиента = Себестоимость * Наценку (Markup)
-                    double priceForCutting = costPrice * profile.MarkupCoefficient;
+                    // Учитываем время пробивок в себестоимости: пробивки занимают время и потребляют ресурс
+                    double pierceTimeMinutes = (piercesCount * settings.PierceTimeSeconds) / 60.0;
+                    double pierceCost = pierceTimeMinutes * machineCostPerHour;
 
-                    // ✅ НОВЫЙ РАСЧЕТ ПРОБИВОК (множитель на количество отверстий)
+                    double costPriceWithPierces = costPrice + pierceCost;
+
+                    // Д. Цена для клиента = Себестоимость с наценкой (MarkupCoefficient задан в процентах).
+                    // Интерпретируем значение как % наценки (например 150 => +150% => итог = cost * (1 + 150/100) = cost * 2.5).
+
+                    // Добавляем наладку и минимальную цену за заказ
+                    double priceForCutting = costPriceWithPierces * (1 + profile.MarkupCoefficient / 100.0);
+                    priceForCutting += settings.LaserSetupCostPerJob / Math.Max(1, quantity); // распределяем наладку на детали
+                    if (priceForCutting * quantity < settings.LaserMinChargePerJob)
+                    {
+                        // Если итог по заказу меньше минимума, выставляем минимум (распределяем на деталь)
+                        priceForCutting = settings.LaserMinChargePerJob / (double)Math.Max(1, quantity);
+                    }
+
+                    // ✅ НОВЫЙ РАСЧЕТ ПРОБИВОК (цена за пробивку из профиля * количество пробивок на деталь)
                     double priceForPierces = profile.PiercePrice * piercesCount;
+
+                    // Обновляем лог себестоимости с учётом пробивок
+                    costPrice = costPriceWithPierces;
 
                     // Е. Сложность (Кувалда)
                     double handlingExtra = 0;
@@ -143,10 +155,11 @@ namespace MetalCalcWPF.Services
                     result.LaserCost = laserTotalPerOne * quantity;
 
                     // ✅ НОВОЕ: Детализация для отладки
-                    result.LaserDetails = $"Резка: {Math.Round(priceForCutting * quantity):N0} ₸ | " +
-                                         $"Пробивки ({piercesCount}шт): {Math.Round(priceForPierces * quantity):N0} ₸ | " +
-                                         $"Кислород: {Math.Round(oxygenCost):N0} ₸ | " +
-                                         $"Тяжесть: {Math.Round(handlingExtra * quantity):N0} ₸";
+                    result.LaserDetails =
+                        $"cutLen={laserLengthMeters}m; speed={profile.CuttingSpeed}m/min; time={Math.Round(cuttingTimeMinutes,2)}min ({Math.Round(cuttingTimeHours,4)}h) | " +
+                        $"machineRate={Math.Round(machineCostPerHour):N0}₸/h; baseCost={Math.Round(costPrice,2)}₸ | " +
+                        $"cutPrice(one)={Math.Round(priceForCutting,2)}₸; pierce(one)={Math.Round(priceForPierces,2)}₸ ({piercesCount}шт) | " +
+                        $"oxygenTotal={Math.Round(oxygenCost):N0}₸; handling(one)={Math.Round(handlingExtra,2)}₸";
 
                     logBuilder += $"+ Laser({piercesCount}x pierce) ";
                 }

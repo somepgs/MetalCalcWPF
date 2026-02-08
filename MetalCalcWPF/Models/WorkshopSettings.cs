@@ -18,6 +18,11 @@ namespace MetalCalcWPF.Models
         public double OxygenBottlePrice { get; set; } = 5000; // ✅ ОБНОВЛЕНО: 5000 тенге
         public double AmortizationPerHour { get; set; } = 650;
 
+        // Дополнительные настройки для лазера
+        public double LaserSetupCostPerJob { get; set; } = 1000; // Наладка за партию
+        public double LaserMinChargePerJob { get; set; } = 500;   // Минимальная стоимость резки за заказ
+        public double PierceTimeSeconds { get; set; } = 5;        // Время на 1 пробивку (сек)
+
         // ✅ НОВЫЕ ПАРАМЕТРЫ КИСЛОРОДА
         public double OxygenBottleVolumeLiters { get; set; } = 40;    // Объем баллона (литры)
         public double OxygenBottlePressureAtm { get; set; } = 150;    // Давление (атмосферы)

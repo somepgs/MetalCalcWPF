@@ -141,8 +141,11 @@
                           AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
                     <DataGrid.ContextMenu>
                         <ContextMenu>
+                            <!-- ContextMenu находится вне логического дерева, поэтому используем PlacementTarget.
+                                 Передаём выбранный элемент как параметр -->
                             <MenuItem Header="🗑 Удалить строку"
-                                      Command="{Binding DataContext.DeleteOrderCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                      Command="{Binding PlacementTarget.DataContext.DeleteOrderByParamCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         </ContextMenu>
                     </DataGrid.ContextMenu>
                     <DataGrid.Columns>

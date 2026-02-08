@@ -29,6 +29,10 @@ namespace MetalCalcWPF.ViewModels
         private string _oxygenFlowText = string.Empty;
         private string _oxygenPriceText = string.Empty;
         private string _oxygenCalculationInfo = string.Empty;
+        // Новые параметры лазера
+        private string _laserSetupText = string.Empty;
+        private string _laserMinChargeText = string.Empty;
+        private string _pierceTimeText = string.Empty;
 
         public SettingsViewModel(IDatabaseService databaseService, IMessageService messageService)
         {
@@ -145,6 +149,24 @@ namespace MetalCalcWPF.ViewModels
             set => SetProperty(ref _oxygenCalculationInfo, value);
         }
 
+        public string LaserSetupText
+        {
+            get => _laserSetupText;
+            set => SetProperty(ref _laserSetupText, value);
+        }
+
+        public string LaserMinChargeText
+        {
+            get => _laserMinChargeText;
+            set => SetProperty(ref _laserMinChargeText, value);
+        }
+
+        public string PierceTimeText
+        {
+            get => _pierceTimeText;
+            set => SetProperty(ref _pierceTimeText, value);
+        }
+
         private void LoadFromSettings(WorkshopSettings settings)
         {
             SalaryText = settings.OperatorMonthlySalary.ToString();
@@ -163,6 +185,11 @@ namespace MetalCalcWPF.ViewModels
             OxygenPressureText = settings.OxygenBottlePressureAtm.ToString();
             OxygenFlowText = settings.OxygenFlowRateLpm.ToString();
             OxygenPriceText = settings.OxygenBottlePrice.ToString();
+
+            // Новые параметры лазера
+            LaserSetupText = settings.LaserSetupCostPerJob.ToString();
+            LaserMinChargeText = settings.LaserMinChargePerJob.ToString();
+            PierceTimeText = settings.PierceTimeSeconds.ToString();
 
             UpdateOxygenCalculation();
         }
@@ -225,6 +252,11 @@ namespace MetalCalcWPF.ViewModels
                 _settings.OxygenBottlePressureAtm = ParseDouble(OxygenPressureText);
                 _settings.OxygenFlowRateLpm = ParseDouble(OxygenFlowText);
                 _settings.OxygenBottlePrice = ParseDouble(OxygenPriceText);
+
+                // Новые параметры лазера
+                _settings.LaserSetupCostPerJob = ParseDouble(LaserSetupText);
+                _settings.LaserMinChargePerJob = ParseDouble(LaserMinChargeText);
+                _settings.PierceTimeSeconds = ParseDouble(PierceTimeText);
 
                 _databaseService.SaveSettings(_settings);
                 _messageService.ShowInfo("Настройки сохранены!");
