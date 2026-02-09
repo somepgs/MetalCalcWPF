@@ -29,7 +29,7 @@ namespace MetalCalcWPF.ViewModels
         private string _oxygenFlowText = string.Empty;
         private string _oxygenPriceText = string.Empty;
         private string _oxygenCalculationInfo = string.Empty;
-        // Новые параметры лазера
+        // Новые параметры лазера (перенесены в редактор базы данных)
         private string _laserSetupText = string.Empty;
         private string _laserMinChargeText = string.Empty;
         private string _pierceTimeText = string.Empty;
@@ -41,8 +41,6 @@ namespace MetalCalcWPF.ViewModels
             _settings = _databaseService.GetSettings();
 
             SaveCommand = new RelayCommand(_ => Save());
-            AddLaserProfileCommand = new RelayCommand(_ => AddLaserProfile());
-            RemoveLaserProfileCommand = new RelayCommand(p => RemoveLaserProfile(p));
             LoadFromSettings(_settings);
 
             // Подписка на изменения для автоматического пересчета
@@ -59,8 +57,6 @@ namespace MetalCalcWPF.ViewModels
         }
 
         public RelayCommand SaveCommand { get; }
-        public RelayCommand AddLaserProfileCommand { get; }
-        public RelayCommand RemoveLaserProfileCommand { get; }
 
         public string SalaryText
         {
@@ -153,33 +149,10 @@ namespace MetalCalcWPF.ViewModels
             set => SetProperty(ref _oxygenCalculationInfo, value);
         }
 
-        public string LaserSetupText
-        {
-            get => _laserSetupText;
-            set => SetProperty(ref _laserSetupText, value);
-        }
-
-        public string LaserMinChargeText
-        {
-            get => _laserMinChargeText;
-            set => SetProperty(ref _laserMinChargeText, value);
-        }
-
-        public string PierceTimeText
-        {
-            get => _pierceTimeText;
-            set => SetProperty(ref _pierceTimeText, value);
-        }
-
-        // Список профилей резки для редактирования
-        public System.Collections.ObjectModel.ObservableCollection<MaterialProfile> LaserProfiles { get; private set; } = new System.Collections.ObjectModel.ObservableCollection<MaterialProfile>();
-
-        private MaterialProfile? _selectedLaserProfile;
-        public MaterialProfile? SelectedLaserProfile
-        {
-            get => _selectedLaserProfile;
-            set => SetProperty(ref _selectedLaserProfile, value);
-        }
+        // Новые параметры лазера (управляются через "База данных")
+        public string LaserSetupText { get => _laserSetupText; set => SetProperty(ref _laserSetupText, value); }
+        public string LaserMinChargeText { get => _laserMinChargeText; set => SetProperty(ref _laserMinChargeText, value); }
+        public string PierceTimeText { get => _pierceTimeText; set => SetProperty(ref _pierceTimeText, value); }
 
         private void LoadFromSettings(WorkshopSettings settings)
         {
@@ -207,29 +180,10 @@ namespace MetalCalcWPF.ViewModels
 
             UpdateOxygenCalculation();
 
-            // Загрузка профилей резки
-            LaserProfiles.Clear();
-            foreach (var p in _databaseService.GetAllLaserProfiles())
-            {
-                LaserProfiles.Add(p);
-            }
-            SelectedLaserProfile = LaserProfiles.Count > 0 ? LaserProfiles[0] : null;
+            // Профили резки редактируются в окне "База данных"
         }
 
-        private void AddLaserProfile()
-        {
-            var p = new MaterialProfile { Thickness = 0, GasType = "Air", CuttingSpeed = 1, PiercePrice = 0, MarkupCoefficient = 100 };
-            LaserProfiles.Add(p);
-            SelectedLaserProfile = p;
-        }
-
-        private void RemoveLaserProfile(object? param)
-        {
-            if (param is MaterialProfile p && LaserProfiles.Contains(p))
-            {
-                LaserProfiles.Remove(p);
-            }
-        }
+        // Управление профилями резки теперь происходит в редакторе базы данных (DataEditWindow)
 
         // ✅ АВТОМАТИЧЕСКИЙ РАСЧЕТ ПОКАЗАТЕЛЕЙ КИСЛОРОДА
         private void UpdateOxygenCalculation()
@@ -297,8 +251,7 @@ namespace MetalCalcWPF.ViewModels
 
                 _databaseService.SaveSettings(_settings);
 
-                // Сохраняем профили резки
-                _databaseService.UpdateAllLaserProfiles(new System.Collections.Generic.List<MaterialProfile>(LaserProfiles));
+                // Профили резки редактируются в редакторе базы данных; здесь сохраняем только прочие настройки
 
                 _messageService.ShowInfo("Настройки сохранены!");
             }

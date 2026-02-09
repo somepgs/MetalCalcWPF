@@ -118,41 +118,8 @@
                 </StackPanel>
             </TabItem>
 
-            <!-- ✅ НОВАЯ ВКЛАДКА: ЛАЗЕР -->
-            <TabItem Header="🔥 Лазер">
-                <StackPanel Margin="10">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-                        <Button Content="Добавить профиль" Command="{Binding AddLaserProfileCommand}" Margin="0,0,5,0"/>
-                        <Button Content="Удалить" Command="{Binding RemoveLaserProfileCommand}" CommandParameter="{Binding SelectedLaserProfile}"/>
-                    </StackPanel>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <ListBox Grid.Column="0" ItemsSource="{Binding LaserProfiles}" SelectedItem="{Binding SelectedLaserProfile}" DisplayMemberPath="Thickness"/>
-
-                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Толщина (мм):"/>
-                            <TextBox Text="{Binding SelectedLaserProfile.Thickness, UpdateSourceTrigger=PropertyChanged}"/>
-
-                            <TextBlock Text="Газ (Air/Oxygen):" Margin="0,8,0,0"/>
-                            <TextBox Text="{Binding SelectedLaserProfile.GasType, UpdateSourceTrigger=PropertyChanged}"/>
-
-                            <TextBlock Text="Скорость резки (м/мин):" Margin="0,8,0,0"/>
-                            <TextBox Text="{Binding SelectedLaserProfile.CuttingSpeed, UpdateSourceTrigger=PropertyChanged}"/>
-
-                            <TextBlock Text="Цена пробивки (тг):" Margin="0,8,0,0"/>
-                            <TextBox Text="{Binding SelectedLaserProfile.PiercePrice, UpdateSourceTrigger=PropertyChanged}"/>
-
-                            <TextBlock Text="Наценка (%) :" Margin="0,8,0,0"/>
-                            <TextBox Text="{Binding SelectedLaserProfile.MarkupCoefficient, UpdateSourceTrigger=PropertyChanged}"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </TabItem>
+            <!-- ЛАЗЕР: профили редактируются в Базе данных -->
+            <!-- Лазер: профиль резки управляется в редакторе базы данных -->
 
             <!-- ✅ НОВАЯ ВКЛАДКА: КИСЛОРОД -->
             <TabItem Header="💨 Кислород">
@@ -202,6 +169,7 @@
                                     </Binding>
                                 </TextBox.Text>
                             </TextBox>
+                        <TextBox Margin="0,2,0,10" FontWeight="Bold" Text="{Binding OxygenPriceText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                     </GroupBox>
 
