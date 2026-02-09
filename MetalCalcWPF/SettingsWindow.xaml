@@ -169,7 +169,6 @@
                                     </Binding>
                                 </TextBox.Text>
                             </TextBox>
-                        <TextBox Margin="0,2,0,10" FontWeight="Bold" Text="{Binding OxygenPriceText, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                     </GroupBox>
 
@@ -210,6 +209,87 @@
                                     <Binding Path="PierceTimeText" UpdateSourceTrigger="PropertyChanged">
                                         <Binding.ValidationRules>
                                             <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Сварка (параметры)" Padding="10" Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Оклад сварщика (тг/мес):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Оклад сварщика в тенге в месяц">
+                                <TextBox.Text>
+                                    <Binding Path="WelderSalaryText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock Text="Цена проволоки (тг/кг):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Цена сварочной проволоки за килограмм">
+                                <TextBox.Text>
+                                    <Binding Path="WeldWirePriceText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock Text="Расход проволоки (г/см):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Сколько грамм проволоки требуется на 1 см шва">
+                                <TextBox.Text>
+                                    <Binding Path="WeldWireConsumptionText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock Text="Стоимость баллона газа (тг):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Стоимость одной заправки газового баллона">
+                                <TextBox.Text>
+                                    <Binding Path="WeldGasPriceText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule AllowZero="true" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock Text="Объем баллона (л):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Объем газового баллона в литрах">
+                                <TextBox.Text>
+                                    <Binding Path="WeldGasVolumeText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock Text="Давление баллона (атм):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Рабочее давление баллона в атмосферах">
+                                <TextBox.Text>
+                                    <Binding Path="WeldGasPressureText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock Text="Расход газа (л/мин):" />
+                            <TextBox Margin="0,2,0,5" ToolTip="Расход газа при сварке в литрах в минуту">
+                                <TextBox.Text>
+                                    <Binding Path="WeldGasFlowText" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <infra:PositiveDoubleValidationRule />
                                         </Binding.ValidationRules>
                                     </Binding>
                                 </TextBox.Text>

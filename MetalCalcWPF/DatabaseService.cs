@@ -1,4 +1,4 @@
-﻿using SQLite;
+using SQLite;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,22 +9,18 @@ namespace MetalCalcWPF
 {
     public class DatabaseService : IDatabaseService
     {
-        // Путь: C:\Users\User\Documents\MetalCalc\workshop.db
         private readonly string _dbPath;
 
         public DatabaseService()
         {
-            // 1. Получаем путь к "Мои Документы"
             string docFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string appFolder = Path.Combine(docFolder, "MetalCalc");
 
-            // 2. Если папки нет - создаем
             if (!Directory.Exists(appFolder))
             {
                 Directory.CreateDirectory(appFolder);
             }
 
-            // 3. Полный путь к файлу
             _dbPath = Path.Combine(appFolder, "workshop.db");
 
             using (var db = new SQLiteConnection(_dbPath))
@@ -35,6 +31,7 @@ namespace MetalCalcWPF
                 db.CreateTable<OrderHistory>();
                 db.CreateTable<BendingProfile>();
                 db.CreateTable<MaterialType>();
+                db.CreateTable<WeldingProfile>(); // ✅ НОВАЯ ТАБЛИЦА
 
                 // --- АВТО-ЗАПОЛНЕНИЕ ЛАЗЕРА ---
                 if (db.Table<MaterialProfile>().Count() == 0)
@@ -69,34 +66,62 @@ namespace MetalCalcWPF
                     db.InsertAll(list);
                 }
 
-                // --- АВТО-ЗАПОЛНЕНИЕ ГИБКИ (Данные из твоего Excel) ---
+                // --- АВТО-ЗАПОЛНЕНИЕ ГИБКИ ---
                 if (db.Table<BendingProfile>().Count() == 0)
                 {
                     var bendList = new System.Collections.Generic.List<BendingProfile>
                     {
-                        // Тонкие (Наладка 2000)
                         new BendingProfile { Thickness = 0.5, V_Die = 6,  MinFlange = 5,  PriceLen1500 = 100, PriceLen3000 = 250, PriceLen6000 = 600, SetupPrice = 2000 },
                         new BendingProfile { Thickness = 1.0, V_Die = 8,  MinFlange = 6,  PriceLen1500 = 100, PriceLen3000 = 250, PriceLen6000 = 600, SetupPrice = 2000 },
                         new BendingProfile { Thickness = 1.5, V_Die = 12, MinFlange = 8,  PriceLen1500 = 100, PriceLen3000 = 250, PriceLen6000 = 600, SetupPrice = 2000 },
                         new BendingProfile { Thickness = 2.0, V_Die = 16, MinFlange = 11, PriceLen1500 = 120, PriceLen3000 = 300, PriceLen6000 = 700, SetupPrice = 2000 },
-                        
-                        // Средние (Наладка растет)
                         new BendingProfile { Thickness = 3.0, V_Die = 26, MinFlange = 18, PriceLen1500 = 150, PriceLen3000 = 400, PriceLen6000 = 1000, SetupPrice = 2000 },
                         new BendingProfile { Thickness = 4.0, V_Die = 32, MinFlange = 22, PriceLen1500 = 250, PriceLen3000 = 600, PriceLen6000 = 2000, SetupPrice = 3000 },
                         new BendingProfile { Thickness = 5.0, V_Die = 40, MinFlange = 28, PriceLen1500 = 250, PriceLen3000 = 600, PriceLen6000 = 2000, SetupPrice = 3000 },
                         new BendingProfile { Thickness = 6.0, V_Die = 50, MinFlange = 35, PriceLen1500 = 350, PriceLen3000 = 800, PriceLen6000 = 2500, SetupPrice = 3000 },
-
-                        // Толстые (Высокая цена и дорогая наладка)
                         new BendingProfile { Thickness = 8.0, V_Die = 60,  MinFlange = 45, PriceLen1500 = 500,  PriceLen3000 = 1200, PriceLen6000 = 4000,  SetupPrice = 5000 },
                         new BendingProfile { Thickness = 10.0, V_Die = 80, MinFlange = 55, PriceLen1500 = 800,  PriceLen3000 = 2000, PriceLen6000 = 6000,  SetupPrice = 8000 },
                         new BendingProfile { Thickness = 12.0, V_Die = 100,MinFlange = 70, PriceLen1500 = 1200, PriceLen3000 = 3000, PriceLen6000 = 9000,  SetupPrice = 10000 },
                         new BendingProfile { Thickness = 14.0, V_Die = 130,MinFlange = 90, PriceLen1500 = 1500, PriceLen3000 = 4000, PriceLen6000 = 12000, SetupPrice = 12000 },
                         new BendingProfile { Thickness = 16.0, V_Die = 160,MinFlange = 110,PriceLen1500 = 2000, PriceLen3000 = 5000, PriceLen6000 = 15000, SetupPrice = 15000 },
-                        
-                        // Супер-тяжелые
                         new BendingProfile { Thickness = 20.0, V_Die = 250,MinFlange = 150,PriceLen1500 = 3500, PriceLen3000 = 8000, PriceLen6000 = 25000, SetupPrice = 20000 },
                     };
                     db.InsertAll(bendList);
+                }
+
+                // --- ✅ АВТО-ЗАПОЛНЕНИЕ СВАРКИ (Данные из Excel) ---
+                if (db.Table<WeldingProfile>().Count() == 0)
+                {
+                    var weldList = new System.Collections.Generic.List<WeldingProfile>
+                    {
+                        // Катет 3мм
+                        new WeldingProfile { FilletSize = 3.0, WeldingSpeed = 45, WeightPerCm = 0.7, CostPerCm = 4.50m, PricePerCm = 13.51m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 4мм
+                        new WeldingProfile { FilletSize = 4.0, WeldingSpeed = 35, WeightPerCm = 1.1, CostPerCm = 6.10m, PricePerCm = 18.29m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 5мм
+                        new WeldingProfile { FilletSize = 5.0, WeldingSpeed = 25, WeightPerCm = 1.8, CostPerCm = 8.93m, PricePerCm = 26.80m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 6мм
+                        new WeldingProfile { FilletSize = 6.0, WeldingSpeed = 20, WeightPerCm = 2.7, CostPerCm = 11.85m, PricePerCm = 35.56m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 8мм
+                        new WeldingProfile { FilletSize = 8.0, WeldingSpeed = 14, WeightPerCm = 4.7, CostPerCm = 18.22m, PricePerCm = 54.67m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 10мм
+                        new WeldingProfile { FilletSize = 10.0, WeldingSpeed = 9, WeightPerCm = 7.2, CostPerCm = 28.18m, PricePerCm = 84.54m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 12мм
+                        new WeldingProfile { FilletSize = 12.0, WeldingSpeed = 6, WeightPerCm = 10.5, CostPerCm = 41.81m, PricePerCm = 125.43m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 16мм
+                        new WeldingProfile { FilletSize = 16.0, WeldingSpeed = 4, WeightPerCm = 19.0, CostPerCm = 67.69m, PricePerCm = 203.06m, MarkupCoefficient = 3.0 },
+                        
+                        // Катет 20мм
+                        new WeldingProfile { FilletSize = 20.0, WeldingSpeed = 3, WeightPerCm = 30.0, CostPerCm = 107.69m, PricePerCm = 323.06m, MarkupCoefficient = 3.0 },
+                    };
+                    db.InsertAll(weldList);
                 }
 
                 // --- АВТО-ЗАПОЛНЕНИЕ МАТЕРИАЛОВ ---
@@ -104,17 +129,15 @@ namespace MetalCalcWPF
                 {
                     var materials = new System.Collections.Generic.List<MaterialType>
                     {
-                        // Плотность стали ~7.85 г/см3
                         new MaterialType { Name = "Черная сталь (Ст3)", Density = 7.85, BasePricePerKg = 355m },
-                        new MaterialType { Name = "Оцинковка", Density = 7.85, BasePricePerKg = 450m },     // Примерная цена
-                        new MaterialType { Name = "Нержавейка (AISI 304)", Density = 7.9, BasePricePerKg = 2500m } // Примерная цена
+                        new MaterialType { Name = "Оцинковка", Density = 7.85, BasePricePerKg = 450m },
+                        new MaterialType { Name = "Нержавейка (AISI 304)", Density = 7.9, BasePricePerKg = 2500m }
                     };
                     db.InsertAll(materials);
                 }
             }
         }
 
-        // Получить настройки
         public WorkshopSettings GetSettings()
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -129,7 +152,6 @@ namespace MetalCalcWPF
             }
         }
 
-        // Сохранить настройки
         public void SaveSettings(WorkshopSettings settings)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -138,7 +160,6 @@ namespace MetalCalcWPF
             }
         }
 
-        // Найти профиль Лазера
         public MaterialProfile GetProfileByThickness(double thickness)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -150,7 +171,6 @@ namespace MetalCalcWPF
             }
         }
 
-        // Найти профиль Гибки
         public BendingProfile GetBendingProfile(double thickness)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -162,7 +182,21 @@ namespace MetalCalcWPF
             }
         }
 
-        // Сохранить заказ
+        // ✅ НОВЫЙ МЕТОД: Найти профиль сварки по толщине металла
+        public WeldingProfile GetWeldingProfile(double thickness)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                // Катет шва обычно = 0.7 × Толщина металла
+                double estimatedFillet = thickness * 0.7;
+                
+                return db.Table<WeldingProfile>()
+                         .Where(p => p.FilletSize >= estimatedFillet)
+                         .OrderBy(p => p.FilletSize)
+                         .FirstOrDefault();
+            }
+        }
+
         public void SaveOrder(OrderHistory order)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -171,7 +205,6 @@ namespace MetalCalcWPF
             }
         }
 
-        // Удалить заказ по ID
         public void DeleteOrder(int id)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -180,7 +213,6 @@ namespace MetalCalcWPF
             }
         }
 
-        // Получить последние 50 заказов
         public List<OrderHistory> GetRecentOrders()
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -200,27 +232,23 @@ namespace MetalCalcWPF
             }
         }
 
-        // 1. Методы для МАТЕРИАЛОВ
         public void UpdateAllMaterials(List<MaterialType> list)
         {
             using (var db = new SQLiteConnection(_dbPath))
             {
-                db.UpdateAll(list);
-                // Если добавили новые строки, их надо вставить, а не обновить.
-                // Для простоты пока используем UpdateAll, но новые строки без ID могут не сохраниться.
-                // Правильнее: db.DeleteAll<MaterialType>(); db.InsertAll(list); (Жесткий метод, но надежный для справочников)
-
-                // Давай сделаем надежно: полная перезапись справочника
                 db.DeleteAll<MaterialType>();
                 db.InsertAll(list);
             }
         }
 
-        // 2. Методы для ЛАЗЕРА
         public List<MaterialProfile> GetAllLaserProfiles()
         {
-            using (var db = new SQLiteConnection(_dbPath)) { return db.Table<MaterialProfile>().OrderBy(p => p.Thickness).ToList(); }
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<MaterialProfile>().OrderBy(p => p.Thickness).ToList();
+            }
         }
+
         public void UpdateAllLaserProfiles(List<MaterialProfile> list)
         {
             using (var db = new SQLiteConnection(_dbPath))
@@ -230,16 +258,37 @@ namespace MetalCalcWPF
             }
         }
 
-        // 3. Методы для ГИБКИ
         public List<BendingProfile> GetAllBendingProfiles()
         {
-            using (var db = new SQLiteConnection(_dbPath)) { return db.Table<BendingProfile>().OrderBy(p => p.Thickness).ToList(); }
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<BendingProfile>().OrderBy(p => p.Thickness).ToList();
+            }
         }
+
         public void UpdateAllBendingProfiles(List<BendingProfile> list)
         {
             using (var db = new SQLiteConnection(_dbPath))
             {
                 db.DeleteAll<BendingProfile>();
+                db.InsertAll(list);
+            }
+        }
+
+        // ✅ НОВЫЕ МЕТОДЫ для СВАРКИ
+        public List<WeldingProfile> GetAllWeldingProfiles()
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<WeldingProfile>().OrderBy(p => p.FilletSize).ToList();
+            }
+        }
+
+        public void UpdateAllWeldingProfiles(List<WeldingProfile> list)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.DeleteAll<WeldingProfile>();
                 db.InsertAll(list);
             }
         }

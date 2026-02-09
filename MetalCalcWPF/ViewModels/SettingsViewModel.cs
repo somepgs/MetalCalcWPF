@@ -22,6 +22,13 @@ namespace MetalCalcWPF.ViewModels
         private string _thresholdText = string.Empty;
         private string _heavyCostText = string.Empty;
         private string _weldCostText = string.Empty;
+        private string _welderSalaryText = string.Empty;
+        private string _weldWirePriceText = string.Empty;
+        private string _weldWireConsumptionText = string.Empty;
+        private string _weldGasPriceText = string.Empty;
+        private string _weldGasVolumeText = string.Empty;
+        private string _weldGasPressureText = string.Empty;
+        private string _weldGasFlowText = string.Empty;
 
         // ✅ НОВЫЕ ПОЛЯ ДЛЯ КИСЛОРОДА
         private string _oxygenVolumeText = string.Empty;
@@ -118,6 +125,48 @@ namespace MetalCalcWPF.ViewModels
             set => SetProperty(ref _weldCostText, value);
         }
 
+        public string WelderSalaryText
+        {
+            get => _welderSalaryText;
+            set => SetProperty(ref _welderSalaryText, value);
+        }
+
+        public string WeldWirePriceText
+        {
+            get => _weldWirePriceText;
+            set => SetProperty(ref _weldWirePriceText, value);
+        }
+
+        public string WeldWireConsumptionText
+        {
+            get => _weldWireConsumptionText;
+            set => SetProperty(ref _weldWireConsumptionText, value);
+        }
+
+        public string WeldGasPriceText
+        {
+            get => _weldGasPriceText;
+            set => SetProperty(ref _weldGasPriceText, value);
+        }
+
+        public string WeldGasVolumeText
+        {
+            get => _weldGasVolumeText;
+            set => SetProperty(ref _weldGasVolumeText, value);
+        }
+
+        public string WeldGasPressureText
+        {
+            get => _weldGasPressureText;
+            set => SetProperty(ref _weldGasPressureText, value);
+        }
+
+        public string WeldGasFlowText
+        {
+            get => _weldGasFlowText;
+            set => SetProperty(ref _weldGasFlowText, value);
+        }
+
         // ✅ НОВЫЕ СВОЙСТВА ДЛЯ КИСЛОРОДА
         public string OxygenVolumeText
         {
@@ -166,6 +215,15 @@ namespace MetalCalcWPF.ViewModels
             ThresholdText = settings.HeavyMaterialThresholdMm.ToString();
             HeavyCostText = settings.HeavyHandlingCostPerDetail.ToString();
             WeldCostText = settings.WeldingCostPerCm.ToString();
+
+            // Сварка
+            WelderSalaryText = settings.WelderMonthlySalary.ToString();
+            WeldWirePriceText = settings.WeldingWirePricePerKg.ToString();
+            WeldWireConsumptionText = settings.WeldingWireConsumptionGPerCm.ToString();
+            WeldGasPriceText = settings.WeldingGasBottlePrice.ToString();
+            WeldGasVolumeText = settings.WeldingGasBottleVolumeLiters.ToString();
+            WeldGasPressureText = settings.WeldingGasBottlePressureAtm.ToString();
+            WeldGasFlowText = settings.WeldingGasFlowLpm.ToString();
 
             // ✅ Кислород
             OxygenVolumeText = settings.OxygenBottleVolumeLiters.ToString();
@@ -237,6 +295,15 @@ namespace MetalCalcWPF.ViewModels
                 _settings.HeavyMaterialThresholdMm = ParseDouble(ThresholdText);
                 _settings.HeavyHandlingCostPerDetail = ParseDecimal(HeavyCostText);
                 _settings.WeldingCostPerCm = ParseDecimal(WeldCostText);
+
+                // Сварка
+                _settings.WelderMonthlySalary = ParseDecimal(WelderSalaryText);
+                _settings.WeldingWirePricePerKg = ParseDecimal(WeldWirePriceText);
+                _settings.WeldingWireConsumptionGPerCm = ParseDouble(WeldWireConsumptionText);
+                _settings.WeldingGasBottlePrice = ParseDecimal(WeldGasPriceText);
+                _settings.WeldingGasBottleVolumeLiters = ParseDouble(WeldGasVolumeText);
+                _settings.WeldingGasBottlePressureAtm = ParseDouble(WeldGasPressureText);
+                _settings.WeldingGasFlowLpm = ParseDouble(WeldGasFlowText);
 
                 // ✅ Кислород
                 _settings.OxygenBottleVolumeLiters = ParseDouble(OxygenVolumeText);

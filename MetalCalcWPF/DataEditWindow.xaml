@@ -1,7 +1,7 @@
 <Window x:Class="MetalCalcWPF.DataEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Редактор Базы Данных (Панель Технолога)" Height="600" Width="900" WindowStartupLocation="CenterScreen">
+        Title="Редактор Базы Данных (Панель Технолога)" Height="650" Width="950" WindowStartupLocation="CenterScreen">
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -51,6 +51,42 @@
                         <DataGridTextColumn Header="Наладка" Binding="{Binding SetupPrice}" Width="100"/>
                     </DataGrid.Columns>
                 </DataGrid>
+            </TabItem>
+
+            <!-- ✅ НОВАЯ ВКЛАДКА: СВАРКА -->
+            <TabItem Header="🔗 Сварка (Профили)">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#E3F2FD" Padding="10" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="📋 Справочник профилей сварки" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock TextWrapping="Wrap" Foreground="#1976D2">
+                                • Катет шва определяется толщиной металла (обычно Катет = 0.7 × Толщина)
+                                <LineBreak/>
+                                • Скорость сварки уменьшается с увеличением катета
+                                <LineBreak/>
+                                • Себестоимость включает: проволоку + работу + газ CO₂ + расходники
+                                <LineBreak/>
+                                • Цена клиенту = Себестоимость × 3.0 (коэффициент наценки)
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding WeldingProfiles}" AutoGenerateColumns="False" CanUserAddRows="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Катет (мм)" Binding="{Binding FilletSize}" Width="80"/>
+                            <DataGridTextColumn Header="Скорость (см/мин)" Binding="{Binding WeldingSpeed}" Width="120"/>
+                            <DataGridTextColumn Header="Вес шва (г/см)" Binding="{Binding WeightPerCm}" Width="110"/>
+                            <DataGridTextColumn Header="Себестоимость (тг/см)" Binding="{Binding CostPerCm}" Width="140"/>
+                            <DataGridTextColumn Header="Цена клиенту (тг/см)" Binding="{Binding PricePerCm}" Width="150"/>
+                            <DataGridTextColumn Header="Коэфф. наценки" Binding="{Binding MarkupCoefficient}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
             </TabItem>
 
         </TabControl>
