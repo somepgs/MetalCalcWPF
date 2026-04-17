@@ -12,14 +12,14 @@ namespace MetalCalcWPF.Infrastructure
         {
             var str = (value ?? string.Empty).ToString();
             if (!NumberParser.TryParseDouble(str, out var v))
-                return new ValidationResult(false, "Не число");
+                return new ValidationResult(false, "РќРµ С‡РёСЃР»Рѕ");
             if (AllowZero)
             {
-                if (v < 0) return new ValidationResult(false, "Должно быть >= 0");
+                if (v < 0) return new ValidationResult(false, "Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ >= 0");
             }
             else
             {
-                if (v <= 0) return new ValidationResult(false, "Должно быть > 0");
+                if (v <= 0) return new ValidationResult(false, "Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ > 0");
             }
             return ValidationResult.ValidResult;
         }
@@ -38,15 +38,15 @@ namespace MetalCalcWPF.Infrastructure
         {
             var str = (value ?? string.Empty).ToString();
             if (!NumberParser.TryParseDouble(str, out var d))
-                return new ValidationResult(false, "Не число");
-            if (d % 1 != 0) return new ValidationResult(false, "Должно быть целым числом");
+                return new ValidationResult(false, "РќРµ С‡РёСЃР»Рѕ");
+            if (d % 1 != 0) return new ValidationResult(false, "Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ С†РµР»С‹Рј С‡РёСЃР»РѕРј");
             if (AllowZero)
             {
-                if (d < 0) return new ValidationResult(false, "Должно быть >= 0");
+                if (d < 0) return new ValidationResult(false, "Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ >= 0");
             }
             else
             {
-                if (d <= 0) return new ValidationResult(false, "Должно быть > 0");
+                if (d <= 0) return new ValidationResult(false, "Р”РѕР»Р¶РЅРѕ Р±С‹С‚СЊ > 0");
             }
             return ValidationResult.ValidResult;
         }

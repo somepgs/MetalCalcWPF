@@ -32,6 +32,7 @@ namespace MetalCalcWPF.Tests
                 return null;
             }
             public BendingProfile? GetBendingProfile(double thickness) => null;
+            public WeldingProfile? GetWeldingProfile(double thickness) => null;
             public void SaveOrder(OrderHistory order) { }
             public void DeleteOrder(int id) { }
             public List<OrderHistory> GetRecentOrders() => new List<OrderHistory>();
@@ -41,6 +42,8 @@ namespace MetalCalcWPF.Tests
             public void UpdateAllLaserProfiles(List<MaterialProfile> list) { Profiles = list; }
             public List<BendingProfile> GetAllBendingProfiles() => new List<BendingProfile>();
             public void UpdateAllBendingProfiles(List<BendingProfile> list) { }
+            public List<WeldingProfile> GetAllWeldingProfiles() => new List<WeldingProfile>();
+            public void UpdateAllWeldingProfiles(List<WeldingProfile> list) { }
         }
 
         [TestMethod]
@@ -63,7 +66,7 @@ namespace MetalCalcWPF.Tests
             // 1m of cut at thickness 12 (oxygen)
             var rOxy = svc.CalculateOrder(100, 100, 12, 1, new MaterialType { Name = "St", Density = 7.85, BasePricePerKg = 1000 }, 1.0, 0, false, 0, 0, false, 0, 0);
 
-            Assert.IsTrue(rOxy.LaserCost >= rAir.LaserCost, "ŒÊË‰‡ÂÏ, ˜ÚÓ ÂÁÍ‡ Ò ÍËÒÎÓÓ‰ÓÏ ÌÂ ‰Â¯Â‚ÎÂ ‚ÓÁ‰Ûı‡");
+            Assert.IsTrue(rOxy.LaserCost >= rAir.LaserCost, "–û–∂–∏–¥–∞–µ–º, —á—Ç–æ —Ä–µ–∑ —Å –∫–∏—Å–ª–æ—Ä–æ–¥–æ–º –Ω–µ –¥–µ—à–µ–≤–ª–µ —Ä–µ–∑–∫–∏ –≤–æ–∑–¥—É—Ö–æ–º");
         }
 
         [TestMethod]

@@ -302,8 +302,8 @@ namespace MetalCalcWPF.ViewModels
                                 $"Лазер: {Math.Round(result.LaserCost):N0} ₸\n" +
                                 $"Гибка: {Math.Round(result.BendingCost):N0} ₸\n" +
                                 $"Сварка: {Math.Round(result.WeldingCost):N0} ₸\n\n" +
-                                // Детализация расчёта лазера (если есть)
-                                (!string.IsNullOrWhiteSpace(result.LaserDetails) ? ("Детали лазера: \n" + result.LaserDetails) : string.Empty);
+                                (!string.IsNullOrWhiteSpace(result.LaserDetails) ? ("Детали лазера: \n" + result.LaserDetails + "\n\n") : string.Empty) +
+                                (!string.IsNullOrWhiteSpace(result.WeldingDetails) ? ("Детали сварки: \n" + result.WeldingDetails) : string.Empty);
 
                 if (result.TotalPrice > 0)
                 {

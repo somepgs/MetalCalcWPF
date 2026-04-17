@@ -107,7 +107,8 @@ namespace MetalCalcWPF.Services
                     decimal costPrice = (decimal)cuttingTimeHours * machineCostPerHour;
 
                     double pierceTimeMinutes = (piercesCount * settings.PierceTimeSeconds) / 60.0;
-                    decimal pierceCost = (decimal)pierceTimeMinutes * machineCostPerHour;
+                    double pierceTimeHours = pierceTimeMinutes / 60.0;
+                    decimal pierceCost = (decimal)pierceTimeHours * machineCostPerHour;
 
                     decimal costPriceWithPierces = costPrice + pierceCost;
 
