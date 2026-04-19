@@ -28,5 +28,14 @@ namespace MetalCalcWPF.Services.Interfaces
         // ✅ НОВЫЕ МЕТОДЫ для сварки
         List<WeldingProfile> GetAllWeldingProfiles();
         void UpdateAllWeldingProfiles(List<WeldingProfile> list);
+
+        // ✅ Сортамент (уголки, швеллеры, двутавры, профтруба и т.п.)
+        List<RolledProfile> GetAllRolledProfiles();
+        List<RolledProfile> GetRolledProfilesByKind(ProfileKind kind);
+        RolledProfile? GetRolledProfileById(int id);
+        int AddRolledProfile(RolledProfile profile);
+        void UpdateRolledProfile(RolledProfile profile);
+        void DeleteRolledProfile(int id);
+        void UpdateAllRolledProfiles(List<RolledProfile> list);
     }
 }

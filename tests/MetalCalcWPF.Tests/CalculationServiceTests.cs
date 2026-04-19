@@ -44,6 +44,38 @@ namespace MetalCalcWPF.Tests
             public void UpdateAllBendingProfiles(List<BendingProfile> list) { }
             public List<WeldingProfile> GetAllWeldingProfiles() => new List<WeldingProfile>();
             public void UpdateAllWeldingProfiles(List<WeldingProfile> list) { }
+
+            public List<RolledProfile> RolledProfiles { get; set; } = new List<RolledProfile>();
+            public List<RolledProfile> GetAllRolledProfiles() => RolledProfiles;
+            public List<RolledProfile> GetRolledProfilesByKind(ProfileKind kind)
+            {
+                var result = new List<RolledProfile>();
+                foreach (var p in RolledProfiles)
+                {
+                    if (p.Kind == kind) result.Add(p);
+                }
+                return result;
+            }
+            public RolledProfile? GetRolledProfileById(int id)
+            {
+                foreach (var p in RolledProfiles)
+                {
+                    if (p.Id == id) return p;
+                }
+                return null;
+            }
+            public int AddRolledProfile(RolledProfile profile)
+            {
+                profile.Id = RolledProfiles.Count + 1;
+                RolledProfiles.Add(profile);
+                return profile.Id;
+            }
+            public void UpdateRolledProfile(RolledProfile profile) { }
+            public void DeleteRolledProfile(int id)
+            {
+                RolledProfiles.RemoveAll(p => p.Id == id);
+            }
+            public void UpdateAllRolledProfiles(List<RolledProfile> list) { RolledProfiles = list; }
         }
 
         [TestMethod]
