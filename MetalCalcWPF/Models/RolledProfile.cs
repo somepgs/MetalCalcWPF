@@ -73,6 +73,21 @@ namespace MetalCalcWPF.Models
         /// <summary>Пользовательский комментарий.</summary>
         public string? Notes { get; set; }
 
+        // ------------------- UI-обёртки флагов (не пишутся в БД) -------------------
+
+        private bool HasFlag(CuttingMachines f) => (CompatibleMachines & (int)f) != 0;
+        private void SetFlag(CuttingMachines f, bool on)
+        {
+            if (on) CompatibleMachines |= (int)f;
+            else CompatibleMachines &= ~(int)f;
+        }
+
+        [Ignore] public bool CanLaser        { get => HasFlag(CuttingMachines.Laser);        set => SetFlag(CuttingMachines.Laser, value); }
+        [Ignore] public bool CanBandSaw      { get => HasFlag(CuttingMachines.BandSaw);      set => SetFlag(CuttingMachines.BandSaw, value); }
+        [Ignore] public bool CanPressShears  { get => HasFlag(CuttingMachines.PressShears);  set => SetFlag(CuttingMachines.PressShears, value); }
+        [Ignore] public bool CanGuillotine   { get => HasFlag(CuttingMachines.Guillotine);   set => SetFlag(CuttingMachines.Guillotine, value); }
+        [Ignore] public bool CanAngleGrinder { get => HasFlag(CuttingMachines.AngleGrinder); set => SetFlag(CuttingMachines.AngleGrinder, value); }
+
         public override string ToString() =>
             string.IsNullOrWhiteSpace(GostDesignation) ? $"{Kind} {SizeCode}" : GostDesignation;
     }
