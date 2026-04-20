@@ -28,6 +28,8 @@ namespace MetalCalcWPF.ViewModels
             // --- ✅ СОРТАМЕНТ ПРОКАТА ---
             RolledProfiles = new ObservableCollection<RolledProfile>(_databaseService.GetAllRolledProfiles());
             RolledProfilesView = CollectionViewSource.GetDefaultView(RolledProfiles);
+            RolledProfilesView.SortDescriptions.Add(new SortDescription(nameof(RolledProfile.Kind), ListSortDirection.Ascending));
+            RolledProfilesView.SortDescriptions.Add(new SortDescription(nameof(RolledProfile.WeightPerMeterKg), ListSortDirection.Ascending));
             RolledProfilesView.Filter = o =>
                 SelectedKindFilter == null || (o is RolledProfile rp && rp.Kind == SelectedKindFilter);
 

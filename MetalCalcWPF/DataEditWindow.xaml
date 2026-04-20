@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:models="clr-namespace:MetalCalcWPF.Models"
+        xmlns:infra="clr-namespace:MetalCalcWPF.Infrastructure"
         Title="Редактор Базы Данных (Панель Технолога)" Height="700" Width="1150" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
@@ -11,6 +12,7 @@
                 <x:Type TypeName="models:ProfileKind"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+        <infra:ProfileKindDisplayConverter x:Key="KindRu"/>
     </Window.Resources>
 
     <Grid Margin="10">
@@ -125,10 +127,16 @@
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="Фильтр по типу:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox Width="220"
+                        <ComboBox Width="320"
                                   ItemsSource="{Binding KindFilters}"
                                   SelectedItem="{Binding SelectedKindFilter}"
-                                  Margin="0,0,10,0"/>
+                                  Margin="0,0,10,0">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource KindRu}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                         <Button Content="➕ Добавить"
                                 Command="{Binding AddRolledProfileCommand}"
                                 Padding="10,3" Margin="0,0,6,0"/>
