@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Windows.Data;
 using ClosedXML.Excel;
 using MetalCalcWPF.Infrastructure;
 using MetalCalcWPF.Models;
@@ -42,6 +44,7 @@ namespace MetalCalcWPF.ViewModels
         private RolledProfile? _selectedRolledProfile;
         private string _lengthMeterText = "1";
         private string _rolledInfoText = string.Empty;
+        private string _rolledSearchText = string.Empty;
 
         public MainViewModel(
             IDatabaseService databaseService,
@@ -64,7 +67,23 @@ namespace MetalCalcWPF.ViewModels
             RolledProfiles = new ObservableCollection<RolledProfile>(
                 _databaseService.GetAllRolledProfiles().Where(p => p.IsActive));
 
+            // Группировка по типу + сортировка по массе внутри группы + фильтр по поиску
+            var view = CollectionViewSource.GetDefaultView(RolledProfiles);
+            view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(RolledProfile.Kind)));
+            view.SortDescriptions.Add(new SortDescription(nameof(RolledProfile.Kind), ListSortDirection.Ascending));
+            view.SortDescriptions.Add(new SortDescription(nameof(RolledProfile.WeightPerMeterKg), ListSortDirection.Ascending));
+            view.Filter = o =>
+            {
+                if (string.IsNullOrWhiteSpace(_rolledSearchText)) return true;
+                if (o is not RolledProfile rp) return false;
+                var q = _rolledSearchText.Trim();
+                return (rp.SizeCode?.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                    || (rp.GostDesignation?.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0);
+            };
+            RolledProfilesView = view;
+
             CalculateCommand = new RelayCommand(_ => Calculate());
+            ClearRolledSearchCommand = new RelayCommand(_ => RolledSearchText = string.Empty);
             DeleteOrderCommand = new RelayCommand(_ => DeleteSelectedOrder(), _ => SelectedHistory != null);
             DeleteOrderByParamCommand = new RelayCommand(p => DeleteOrderByParam(p));
             ExportToExcelCommand = new RelayCommand(_ => ExportToExcel());
@@ -122,6 +141,17 @@ namespace MetalCalcWPF.ViewModels
         public ObservableCollection<MaterialType> Materials { get; }
         public ObservableCollection<OrderHistory> History { get; }
         public ObservableCollection<RolledProfile> RolledProfiles { get; }
+        public ICollectionView RolledProfilesView { get; }
+
+        public string RolledSearchText
+        {
+            get => _rolledSearchText;
+            set
+            {
+                if (SetProperty(ref _rolledSearchText, value))
+                    RolledProfilesView.Refresh();
+            }
+        }
 
         // ✅ Режим сортамента проката
         public bool UseRolledProfile
@@ -264,6 +294,7 @@ namespace MetalCalcWPF.ViewModels
         }
 
         public RelayCommand CalculateCommand { get; }
+        public RelayCommand ClearRolledSearchCommand { get; }
         public RelayCommand DeleteOrderCommand { get; }
         public RelayCommand DeleteOrderByParamCommand { get; }
         public RelayCommand ExportToExcelCommand { get; }

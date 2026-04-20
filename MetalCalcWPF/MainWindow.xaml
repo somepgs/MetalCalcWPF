@@ -1,10 +1,12 @@
 <Window x:Class="MetalCalcWPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:infra="clr-namespace:MetalCalcWPF.Infrastructure"
         Title="Управление цехом (Laser Manager)" Height="720" Width="1000" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <infra:ProfileKindDisplayConverter x:Key="KindRu"/>
     </Window.Resources>
 
     <Grid Margin="10">
@@ -92,11 +94,45 @@
 
                     <!-- Панель выбора профиля проката (видна только в режиме сортамента) -->
                     <StackPanel Visibility="{Binding UseRolledProfile, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Профиль:" FontWeight="Bold" Margin="0,8,0,0"/>
-                        <ComboBox Height="25" Margin="0,5,0,5"
-                                  ItemsSource="{Binding RolledProfiles}"
+                        <TextBlock Text="Поиск по размеру / ГОСТ:" FontWeight="Bold" Margin="0,8,0,0"/>
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Height="25" Grid.Column="0"
+                                     Text="{Binding RolledSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Напр. «50x50», «№14», «8509»"/>
+                            <Button Grid.Column="1" Content="✕" Width="25" Height="25" Margin="3,0,0,0"
+                                    ToolTip="Очистить поиск"
+                                    Command="{Binding ClearRolledSearchCommand}"/>
+                        </Grid>
+
+                        <TextBlock Text="Профиль:" FontWeight="Bold" Margin="0,5,0,0"/>
+                        <ComboBox Height="25" Margin="0,5,0,5" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding RolledProfilesView}"
                                   SelectedItem="{Binding SelectedRolledProfile}"
-                                  IsTextSearchEnabled="True"/>
+                                  IsTextSearchEnabled="True"
+                                  ScrollViewer.CanContentScroll="True"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ComboBox.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#FFF3E0" Padding="6,3">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock FontWeight="Bold" Foreground="#E65100"
+                                                               Text="{Binding Name, Converter={StaticResource KindRu}}"/>
+                                                    <TextBlock Foreground="#9E9E9E" Margin="6,0,0,0">
+                                                        (<Run Text="{Binding ItemCount, Mode=OneWay}"/>)
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ComboBox.GroupStyle>
+                        </ComboBox>
                         <TextBlock Text="Длина одной заготовки (м):" FontWeight="Bold"/>
                         <Grid Margin="0,5,0,5">
                             <Grid.ColumnDefinitions>
