@@ -32,6 +32,7 @@ namespace MetalCalcWPF
                 db.CreateTable<BendingProfile>();
                 db.CreateTable<MaterialType>();
                 db.CreateTable<WeldingProfile>(); // ✅ НОВАЯ ТАБЛИЦА
+                db.CreateTable<RolledProfile>(); // ✅ Сортамент проката
 
                 // --- АВТО-ЗАПОЛНЕНИЕ ЛАЗЕРА ---
                 if (db.Table<MaterialProfile>().Count() == 0)
@@ -135,7 +136,209 @@ namespace MetalCalcWPF
                     };
                     db.InsertAll(materials);
                 }
+
+                // --- ✅ АВТО-ЗАПОЛНЕНИЕ СОРТАМЕНТА ПРОКАТА ---
+                if (db.Table<RolledProfile>().Count() == 0)
+                {
+                    db.InsertAll(BuildRolledProfileSeed());
+                }
             }
+        }
+
+        /// <summary>
+        /// Стартовый сид сортамента: уголки, швеллеры, двутавры, профтрубы.
+        /// Значения кг/м взяты из ГОСТ-таблиц (округлены до 2-х знаков).
+        /// Полный сортамент можно дополнять через редактор базы данных в приложении.
+        /// </summary>
+        private static List<RolledProfile> BuildRolledProfileSeed()
+        {
+            // Совместимость со станками для удобочитаемости
+            const int MA = (int)(CuttingMachines.BandSaw | CuttingMachines.PressShears | CuttingMachines.AngleGrinder); // уголок
+            const int MB = (int)(CuttingMachines.BandSaw | CuttingMachines.AngleGrinder);                                // швеллер/двутавр/труба
+
+            var list = new List<RolledProfile>();
+
+            // ---------- Уголок равнополочный (ГОСТ 8509-93) ----------
+            void AddAngleEqual(double side, double t, double kgm)
+            {
+                list.Add(new RolledProfile
+                {
+                    Kind = ProfileKind.AngleEqual,
+                    SizeCode = $"{side:0.##}x{side:0.##}x{t:0.##}",
+                    GostDesignation = $"Уголок {side:0.##}×{side:0.##}×{t:0.##} ГОСТ 8509-93",
+                    WeightPerMeterKg = kgm,
+                    Height = side,
+                    Width = side,
+                    WallThickness = t,
+                    CompatibleMachines = MA,
+                });
+            }
+            AddAngleEqual(20, 3, 0.89);   AddAngleEqual(20, 4, 1.15);
+            AddAngleEqual(25, 3, 1.12);   AddAngleEqual(25, 4, 1.46);   AddAngleEqual(25, 5, 1.78);
+            AddAngleEqual(32, 3, 1.46);   AddAngleEqual(32, 4, 1.91);
+            AddAngleEqual(40, 3, 1.85);   AddAngleEqual(40, 4, 2.42);   AddAngleEqual(40, 5, 2.98);
+            AddAngleEqual(45, 4, 2.73);   AddAngleEqual(45, 5, 3.37);
+            AddAngleEqual(50, 3, 2.32);   AddAngleEqual(50, 4, 3.05);   AddAngleEqual(50, 5, 3.77);
+            AddAngleEqual(50, 6, 4.47);   AddAngleEqual(50, 7, 5.15);   AddAngleEqual(50, 8, 5.80);
+            AddAngleEqual(63, 4, 3.90);   AddAngleEqual(63, 5, 4.81);   AddAngleEqual(63, 6, 5.72);
+            AddAngleEqual(70, 5, 5.38);   AddAngleEqual(70, 6, 6.39);   AddAngleEqual(70, 7, 7.39);
+            AddAngleEqual(70, 8, 8.37);
+            AddAngleEqual(75, 5, 5.80);   AddAngleEqual(75, 6, 6.89);   AddAngleEqual(75, 7, 7.96);
+            AddAngleEqual(75, 8, 9.02);   AddAngleEqual(75, 9, 10.07);
+            AddAngleEqual(80, 6, 7.36);   AddAngleEqual(80, 7, 8.51);   AddAngleEqual(80, 8, 9.65);
+            AddAngleEqual(90, 6, 8.33);   AddAngleEqual(90, 7, 9.64);   AddAngleEqual(90, 8, 10.93);
+            AddAngleEqual(90, 9, 12.20);
+            AddAngleEqual(100, 7, 10.79); AddAngleEqual(100, 8, 12.25);
+            AddAngleEqual(100, 10, 15.10); AddAngleEqual(100, 12, 17.90);
+            AddAngleEqual(125, 8, 15.46); AddAngleEqual(125, 9, 17.30);
+            AddAngleEqual(125, 10, 19.10); AddAngleEqual(125, 12, 22.68);
+            AddAngleEqual(140, 9, 19.41); AddAngleEqual(140, 10, 21.45);
+            AddAngleEqual(160, 10, 24.67); AddAngleEqual(160, 12, 29.35);
+            AddAngleEqual(200, 12, 36.97); AddAngleEqual(200, 16, 48.65);
+
+            // ---------- Уголок неравнополочный (ГОСТ 8510-86) ----------
+            void AddAngleUnequal(double b, double a, double t, double kgm)
+            {
+                list.Add(new RolledProfile
+                {
+                    Kind = ProfileKind.AngleUnequal,
+                    SizeCode = $"{b:0.##}x{a:0.##}x{t:0.##}",
+                    GostDesignation = $"Уголок {b:0.##}×{a:0.##}×{t:0.##} ГОСТ 8510-86",
+                    WeightPerMeterKg = kgm,
+                    Height = b,
+                    Width = a,
+                    WallThickness = t,
+                    CompatibleMachines = MA,
+                });
+            }
+            AddAngleUnequal(25, 16, 3, 0.91);
+            AddAngleUnequal(32, 20, 3, 1.17);
+            AddAngleUnequal(40, 25, 3, 1.48);  AddAngleUnequal(40, 25, 4, 1.94);
+            AddAngleUnequal(50, 32, 3, 1.90);  AddAngleUnequal(50, 32, 4, 2.40);
+            AddAngleUnequal(63, 40, 4, 3.17);  AddAngleUnequal(63, 40, 5, 3.91);  AddAngleUnequal(63, 40, 6, 4.63);
+            AddAngleUnequal(75, 50, 5, 4.79);  AddAngleUnequal(75, 50, 6, 5.69);  AddAngleUnequal(75, 50, 8, 7.43);
+            AddAngleUnequal(100, 63, 6, 7.53); AddAngleUnequal(100, 63, 8, 9.87); AddAngleUnequal(100, 63, 10, 12.14);
+            AddAngleUnequal(125, 80, 7, 11.04); AddAngleUnequal(125, 80, 10, 15.47);
+            AddAngleUnequal(160, 100, 9, 18.00); AddAngleUnequal(160, 100, 12, 23.59);
+
+            // ---------- Профтруба квадратная (ГОСТ 30245-2003) ----------
+            void AddSquareTube(double side, double wall, double kgm)
+            {
+                list.Add(new RolledProfile
+                {
+                    Kind = ProfileKind.SquareTube,
+                    SizeCode = $"{side:0.##}x{side:0.##}x{wall:0.##}",
+                    GostDesignation = $"Профиль {side:0.##}×{side:0.##}×{wall:0.##} ГОСТ 30245-2003",
+                    WeightPerMeterKg = kgm,
+                    Height = side,
+                    Width = side,
+                    WallThickness = wall,
+                    CompatibleMachines = MB,
+                });
+            }
+            AddSquareTube(15, 1.5, 0.62);
+            AddSquareTube(20, 1.5, 0.86); AddSquareTube(20, 2, 1.05);
+            AddSquareTube(25, 1.5, 1.09); AddSquareTube(25, 2, 1.36);
+            AddSquareTube(30, 2, 1.67);   AddSquareTube(30, 3, 2.36);
+            AddSquareTube(40, 2, 2.30);   AddSquareTube(40, 3, 3.37); AddSquareTube(40, 4, 4.36);
+            AddSquareTube(50, 2, 2.93);   AddSquareTube(50, 3, 4.32); AddSquareTube(50, 4, 5.63);
+            AddSquareTube(60, 3, 5.26);   AddSquareTube(60, 4, 6.87); AddSquareTube(60, 5, 8.37);
+            AddSquareTube(70, 3, 6.21);   AddSquareTube(70, 4, 8.13);
+            AddSquareTube(80, 3, 7.15);   AddSquareTube(80, 4, 9.38); AddSquareTube(80, 5, 11.48);
+            AddSquareTube(80, 6, 13.49);
+            AddSquareTube(100, 4, 11.88); AddSquareTube(100, 5, 14.62); AddSquareTube(100, 6, 17.27);
+            AddSquareTube(100, 8, 22.28);
+            AddSquareTube(120, 4, 14.38); AddSquareTube(120, 5, 17.76); AddSquareTube(120, 6, 21.03);
+            AddSquareTube(140, 5, 20.89); AddSquareTube(140, 6, 24.80);
+            AddSquareTube(150, 5, 22.46); AddSquareTube(150, 6, 26.69);
+            AddSquareTube(160, 6, 28.58);
+            AddSquareTube(180, 6, 32.37); AddSquareTube(180, 8, 42.37);
+            AddSquareTube(200, 6, 36.15); AddSquareTube(200, 8, 47.40);
+
+            // ---------- Профтруба прямоугольная (ГОСТ 30245-2003) ----------
+            void AddRectTube(double h, double w, double wall, double kgm)
+            {
+                list.Add(new RolledProfile
+                {
+                    Kind = ProfileKind.RectTube,
+                    SizeCode = $"{h:0.##}x{w:0.##}x{wall:0.##}",
+                    GostDesignation = $"Профиль {h:0.##}×{w:0.##}×{wall:0.##} ГОСТ 30245-2003",
+                    WeightPerMeterKg = kgm,
+                    Height = h,
+                    Width = w,
+                    WallThickness = wall,
+                    CompatibleMachines = MB,
+                });
+            }
+            AddRectTube(40, 20, 1.5, 1.30); AddRectTube(40, 20, 2, 1.70);
+            AddRectTube(40, 25, 2, 1.90);
+            AddRectTube(50, 25, 1.5, 1.66); AddRectTube(50, 25, 2, 2.18);
+            AddRectTube(50, 30, 2, 2.36);   AddRectTube(50, 30, 3, 3.43);
+            AddRectTube(60, 30, 2, 2.67);   AddRectTube(60, 30, 3, 3.90);
+            AddRectTube(60, 40, 2, 2.98);   AddRectTube(60, 40, 3, 4.36); AddRectTube(60, 40, 4, 5.65);
+            AddRectTube(80, 40, 2, 3.60);   AddRectTube(80, 40, 3, 5.30); AddRectTube(80, 40, 4, 6.87);
+            AddRectTube(100, 50, 3, 6.71);  AddRectTube(100, 50, 4, 8.77); AddRectTube(100, 50, 5, 10.70);
+            AddRectTube(100, 60, 3, 7.15);  AddRectTube(100, 60, 4, 9.38);
+            AddRectTube(120, 60, 4, 10.63); AddRectTube(120, 60, 5, 13.05);
+            AddRectTube(120, 80, 4, 11.88); AddRectTube(120, 80, 5, 14.62);
+            AddRectTube(140, 60, 4, 11.88);
+            AddRectTube(150, 100, 5, 18.93); AddRectTube(150, 100, 6, 22.46);
+            AddRectTube(160, 80, 5, 17.76); AddRectTube(160, 80, 6, 21.03);
+            AddRectTube(180, 100, 5, 21.29); AddRectTube(180, 100, 6, 25.29);
+            AddRectTube(200, 100, 6, 27.13); AddRectTube(200, 100, 8, 35.11);
+
+            // ---------- Швеллер (ГОСТ 8240-97), серия "У" ----------
+            void AddChannel(string num, double h, double kgm)
+            {
+                list.Add(new RolledProfile
+                {
+                    Kind = ProfileKind.Channel,
+                    SizeCode = "№" + num,
+                    GostDesignation = $"Швеллер {num}У ГОСТ 8240-97",
+                    WeightPerMeterKg = kgm,
+                    Height = h,
+                    CompatibleMachines = MB,
+                });
+            }
+            AddChannel("5",  50,  4.84);
+            AddChannel("6.5", 65, 5.90);
+            AddChannel("8",  80,  7.05);
+            AddChannel("10", 100, 8.59);
+            AddChannel("12", 120, 10.40);
+            AddChannel("14", 140, 12.30);
+            AddChannel("16", 160, 14.20);
+            AddChannel("18", 180, 16.30);
+            AddChannel("20", 200, 18.40);
+            AddChannel("22", 220, 21.00);
+            AddChannel("24", 240, 24.00);
+            AddChannel("27", 270, 27.70);
+            AddChannel("30", 300, 31.80);
+
+            // ---------- Двутавр (ГОСТ 8239-89) ----------
+            void AddIBeam(string num, double h, double kgm)
+            {
+                list.Add(new RolledProfile
+                {
+                    Kind = ProfileKind.IBeam,
+                    SizeCode = "№" + num,
+                    GostDesignation = $"Двутавр {num} ГОСТ 8239-89",
+                    WeightPerMeterKg = kgm,
+                    Height = h,
+                    CompatibleMachines = MB,
+                });
+            }
+            AddIBeam("10", 100, 9.46);
+            AddIBeam("12", 120, 11.50);
+            AddIBeam("14", 140, 13.70);
+            AddIBeam("16", 160, 15.90);
+            AddIBeam("18", 180, 18.40);
+            AddIBeam("20", 200, 21.00);
+            AddIBeam("22", 220, 24.00);
+            AddIBeam("24", 240, 27.30);
+            AddIBeam("27", 270, 31.50);
+            AddIBeam("30", 300, 36.50);
+
+            return list;
         }
 
         public WorkshopSettings GetSettings()
@@ -289,6 +492,71 @@ namespace MetalCalcWPF
             using (var db = new SQLiteConnection(_dbPath))
             {
                 db.DeleteAll<WeldingProfile>();
+                db.InsertAll(list);
+            }
+        }
+
+        // ✅ НОВЫЕ МЕТОДЫ для СОРТАМЕНТА ПРОКАТА
+        public List<RolledProfile> GetAllRolledProfiles()
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<RolledProfile>()
+                         .OrderBy(p => p.Kind)
+                         .ThenBy(p => p.WeightPerMeterKg)
+                         .ToList();
+            }
+        }
+
+        public List<RolledProfile> GetRolledProfilesByKind(ProfileKind kind)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<RolledProfile>()
+                         .Where(p => p.Kind == kind)
+                         .OrderBy(p => p.WeightPerMeterKg)
+                         .ToList();
+            }
+        }
+
+        public RolledProfile? GetRolledProfileById(int id)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Find<RolledProfile>(id);
+            }
+        }
+
+        public int AddRolledProfile(RolledProfile profile)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Insert(profile);
+                return profile.Id;
+            }
+        }
+
+        public void UpdateRolledProfile(RolledProfile profile)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Update(profile);
+            }
+        }
+
+        public void DeleteRolledProfile(int id)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Delete<RolledProfile>(id);
+            }
+        }
+
+        public void UpdateAllRolledProfiles(List<RolledProfile> list)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.DeleteAll<RolledProfile>();
                 db.InsertAll(list);
             }
         }

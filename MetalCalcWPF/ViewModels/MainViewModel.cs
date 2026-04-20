@@ -37,6 +37,12 @@ namespace MetalCalcWPF.ViewModels
         private string _resultDetails = string.Empty;
         private string _validationMessage = string.Empty;
 
+        // ✅ Режим «Сортамент проката»
+        private bool _useRolledProfile;
+        private RolledProfile? _selectedRolledProfile;
+        private string _lengthMeterText = "1";
+        private string _rolledInfoText = string.Empty;
+
         public MainViewModel(
             IDatabaseService databaseService,
             IWindowService windowService,
@@ -53,6 +59,10 @@ namespace MetalCalcWPF.ViewModels
             Materials = new ObservableCollection<MaterialType>(_databaseService.GetMaterials());
             History = new ObservableCollection<OrderHistory>(_databaseService.GetRecentOrders());
             SelectedMaterial = Materials.FirstOrDefault();
+
+            // ✅ Загружаем только активные профили проката
+            RolledProfiles = new ObservableCollection<RolledProfile>(
+                _databaseService.GetAllRolledProfiles().Where(p => p.IsActive));
 
             CalculateCommand = new RelayCommand(_ => Calculate());
             DeleteOrderCommand = new RelayCommand(_ => DeleteSelectedOrder(), _ => SelectedHistory != null);
@@ -77,15 +87,66 @@ namespace MetalCalcWPF.ViewModels
                     e.PropertyName == nameof(BendLengthText) ||
                     e.PropertyName == nameof(UseWelding) ||
                     e.PropertyName == nameof(WeldLengthText) ||
-                    e.PropertyName == nameof(SelectedMaterial))
+                    e.PropertyName == nameof(SelectedMaterial) ||
+                    e.PropertyName == nameof(UseRolledProfile) ||
+                    e.PropertyName == nameof(SelectedRolledProfile) ||
+                    e.PropertyName == nameof(LengthMeterText))
                 {
                     ValidateAll();
+                    RecalcRolledInfo();
                 }
             };
         }
 
+        private void RecalcRolledInfo()
+        {
+            if (!UseRolledProfile || SelectedRolledProfile == null)
+            {
+                RolledInfoText = string.Empty;
+                return;
+            }
+
+            double lenM = ParseDouble(LengthMeterText);
+            int qty = ConvertToInt(QuantityText, 1);
+            if (qty <= 0) qty = 1;
+
+            double massPerPiece = lenM * SelectedRolledProfile.WeightPerMeterKg;
+            double totalMass = massPerPiece * qty;
+
+            RolledInfoText =
+                $"кг/м: {SelectedRolledProfile.WeightPerMeterKg:0.##}   •   " +
+                $"масса 1 шт: {massPerPiece:0.##} кг   •   " +
+                $"всего: {totalMass:0.##} кг";
+        }
+
         public ObservableCollection<MaterialType> Materials { get; }
         public ObservableCollection<OrderHistory> History { get; }
+        public ObservableCollection<RolledProfile> RolledProfiles { get; }
+
+        // ✅ Режим сортамента проката
+        public bool UseRolledProfile
+        {
+            get => _useRolledProfile;
+            set => SetProperty(ref _useRolledProfile, value);
+        }
+
+        public RolledProfile? SelectedRolledProfile
+        {
+            get => _selectedRolledProfile;
+            set => SetProperty(ref _selectedRolledProfile, value);
+        }
+
+        public string LengthMeterText
+        {
+            get => _lengthMeterText;
+            set => SetProperty(ref _lengthMeterText, value);
+        }
+
+        public string RolledInfoText
+        {
+            get => _rolledInfoText;
+            set => SetProperty(ref _rolledInfoText, value);
+        }
 
         public string ClientName
         {
@@ -239,6 +300,35 @@ namespace MetalCalcWPF.ViewModels
                 double weightKg = ParseDouble(WeightText);
                 double laserLen = ParseDouble(LaserLengthText);
 
+                // ✅ РЕЖИМ СОРТАМЕНТА: заменяем габариты/массу на расчёт из кг/м × длина
+                if (UseRolledProfile)
+                {
+                    if (SelectedRolledProfile == null)
+                    {
+                        _messageService.ShowError("Выберите профиль проката.");
+                        return;
+                    }
+                    double lenM = ParseDouble(LengthMeterText);
+                    if (lenM <= 0)
+                    {
+                        _messageService.ShowError("Укажите длину проката (м > 0).");
+                        return;
+                    }
+
+                    double massPerPiece = lenM * SelectedRolledProfile.WeightPerMeterKg;
+                    weightKg = massPerPiece * quantity;
+
+                    // Габариты в режиме проката не используются
+                    widthMm = 0;
+                    heightMm = 0;
+
+                    // Толщина для профиля берётся из стенки/полки (для валидации и резки, если понадобится)
+                    if (thicknessMm <= 0)
+                        thicknessMm = SelectedRolledProfile.WallThickness
+                                      ?? SelectedRolledProfile.FlangeThickness
+                                      ?? 3.0;
+                }
+
                 // Требуем указать массу партии или габариты детали
                 if (weightKg <= 0 && (widthMm <= 0 || heightMm <= 0))
                 {
@@ -307,11 +397,15 @@ namespace MetalCalcWPF.ViewModels
 
                 if (result.TotalPrice > 0)
                 {
+                    string description = UseRolledProfile && SelectedRolledProfile != null
+                        ? $"{quantity}шт × {ParseDouble(LengthMeterText)}м · {SelectedRolledProfile.SizeCode}"
+                        : $"{quantity}шт / {thicknessMm}мм";
+
                     var newOrder = new OrderHistory
                     {
                         CreatedDate = DateTime.Now,
                         ClientName = clientName,
-                        Description = $"{quantity}шт / {thicknessMm}мм",
+                        Description = description,
                         TotalPrice = Math.Round(result.TotalPrice),
                         OperationType = result.Log
                     };
@@ -466,6 +560,20 @@ namespace MetalCalcWPF.ViewModels
 
         private (bool IsValid, string Message) ValidateAll()
         {
+            // В режиме сортамента толщина/габариты не обязательны — считаем из профиля
+            if (UseRolledProfile)
+            {
+                if (SelectedMaterial == null)
+                    return (false, "Выберите материал.");
+                if (SelectedRolledProfile == null)
+                    return (false, "Выберите профиль проката.");
+                int qr = ConvertToInt(QuantityText, -1);
+                if (qr <= 0) return (false, "Количество должно быть целым положительным (шт).");
+                if (ParseDouble(LengthMeterText) <= 0)
+                    return (false, "Укажите длину проката (м > 0).");
+                return (true, string.Empty);
+            }
+
             // Thickness
             if (string.IsNullOrWhiteSpace(ThicknessText) || ParseDouble(ThicknessText) <= 0)
                 return (false, "Укажите корректную толщину металла (мм > 0).");

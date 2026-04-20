@@ -1,7 +1,17 @@
 <Window x:Class="MetalCalcWPF.DataEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Редактор Базы Данных (Панель Технолога)" Height="650" Width="950" WindowStartupLocation="CenterScreen">
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:models="clr-namespace:MetalCalcWPF.Models"
+        Title="Редактор Базы Данных (Панель Технолога)" Height="700" Width="1150" WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <ObjectDataProvider x:Key="ProfileKindValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="models:ProfileKind"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </Window.Resources>
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -84,6 +94,74 @@
                             <DataGridTextColumn Header="Себестоимость (тг/см)" Binding="{Binding CostPerCm}" Width="140"/>
                             <DataGridTextColumn Header="Цена клиенту (тг/см)" Binding="{Binding PricePerCm}" Width="150"/>
                             <DataGridTextColumn Header="Коэфф. наценки" Binding="{Binding MarkupCoefficient}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ✅ НОВАЯ ВКЛАДКА: СОРТАМЕНТ ПРОКАТА -->
+            <TabItem Header="🧱 Сортамент проката">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#FFF3E0" Padding="10" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="📋 Справочник проката: уголки, профтрубы, швеллеры, двутавры"
+                                       FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock TextWrapping="Wrap" Foreground="#E65100">
+                                • Масса 1 пог. м (кг/м) взята из ГОСТ-таблиц — основа расчёта веса заказа.
+                                <LineBreak/>
+                                • Цена = Длина × Масса_на_метр × Цена_материала × Наценка
+                                (либо Цена_за_метр_override, если указана).
+                                <LineBreak/>
+                                • Флаги станков определяют, на каком оборудовании можно отрезать профиль.
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Фильтр по типу:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Width="220"
+                                  ItemsSource="{Binding KindFilters}"
+                                  SelectedItem="{Binding SelectedKindFilter}"
+                                  Margin="0,0,10,0"/>
+                        <Button Content="➕ Добавить"
+                                Command="{Binding AddRolledProfileCommand}"
+                                Padding="10,3" Margin="0,0,6,0"/>
+                        <Button Content="🗑 Удалить выделенный"
+                                Command="{Binding DeleteRolledProfileCommand}"
+                                CommandParameter="{Binding ElementName=RolledGrid, Path=SelectedItem}"
+                                Padding="10,3"/>
+                    </StackPanel>
+
+                    <DataGrid x:Name="RolledGrid" Grid.Row="2"
+                              ItemsSource="{Binding RolledProfilesView}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridComboBoxColumn Header="Тип" Width="110"
+                                                    ItemsSource="{Binding Source={StaticResource ProfileKindValues}}"
+                                                    SelectedItemBinding="{Binding Kind}"/>
+                            <DataGridTextColumn Header="Размер" Binding="{Binding SizeCode}" Width="110"/>
+                            <DataGridTextColumn Header="ГОСТ-обозначение" Binding="{Binding GostDesignation}" Width="240"/>
+                            <DataGridTextColumn Header="кг/м" Binding="{Binding WeightPerMeterKg}" Width="70"/>
+                            <DataGridTextColumn Header="H" Binding="{Binding Height}" Width="55"/>
+                            <DataGridTextColumn Header="W" Binding="{Binding Width}" Width="55"/>
+                            <DataGridTextColumn Header="t" Binding="{Binding WallThickness}" Width="55"/>
+                            <DataGridTextColumn Header="Мат-л ID" Binding="{Binding MaterialTypeId}" Width="65"/>
+                            <DataGridTextColumn Header="Цена/м (override)" Binding="{Binding PricePerMeterOverride}" Width="100"/>
+                            <DataGridCheckBoxColumn Header="Лазер"    Binding="{Binding CanLaser, UpdateSourceTrigger=PropertyChanged}"    Width="55"/>
+                            <DataGridCheckBoxColumn Header="Пила"     Binding="{Binding CanBandSaw, UpdateSourceTrigger=PropertyChanged}"  Width="55"/>
+                            <DataGridCheckBoxColumn Header="П.-нож."  Binding="{Binding CanPressShears, UpdateSourceTrigger=PropertyChanged}" Width="60"/>
+                            <DataGridCheckBoxColumn Header="Гильот."  Binding="{Binding CanGuillotine, UpdateSourceTrigger=PropertyChanged}"  Width="60"/>
+                            <DataGridCheckBoxColumn Header="Болг."    Binding="{Binding CanAngleGrinder, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
+                            <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
+                            <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
