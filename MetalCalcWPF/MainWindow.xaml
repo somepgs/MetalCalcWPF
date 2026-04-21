@@ -291,6 +291,74 @@
                     <Button Content="Рассчитать всё" Height="45" Command="{Binding CalculateCommand}" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
                     <TextBlock Text="{Binding ResultText}" FontSize="26" FontWeight="Bold" Margin="0,15,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding ResultDetails}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,5,0,0"/>
+
+                    <!-- 🔍 Прозрачная детализация расчёта. По умолчанию свернута, чтобы не перегружать экран;
+                         оператор может раскрыть и сверить каждый шаг с Excel-моделью цеха. -->
+                    <Expander Header="🔍 Детализация расчёта"
+                              IsExpanded="False"
+                              Margin="0,10,0,0"
+                              Visibility="{Binding HasBreakdowns, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl ItemsSource="{Binding Breakdowns}" Margin="0,5,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#BDBDBD" BorderThickness="1" CornerRadius="3"
+                                            Margin="0,0,0,6" Padding="6" Background="#FAFAFA">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Section}" FontWeight="Bold" FontSize="12" Foreground="#1565C0"/>
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="10" Foreground="Gray"
+                                                       TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                            <ItemsControl ItemsSource="{Binding Lines}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,1,0,1">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel Grid.Column="0">
+                                                                <TextBlock Text="{Binding Label}" FontSize="11">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <TextBlock Text="{Binding Formula}" FontSize="10" Foreground="Gray"/>
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       Margin="8,0,0,0" FontSize="11">
+                                                                <TextBlock.Text>
+                                                                    <MultiBinding StringFormat="{}{0:N2} {1}">
+                                                                        <Binding Path="Value"/>
+                                                                        <Binding Path="Unit"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Text>
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsTotal}" Value="True">
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                                <Setter Property="Foreground" Value="#2E7D32"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Expander>
+
                     <TextBlock Text="{Binding ValidationMessage}" FontSize="12" Foreground="DarkRed" TextWrapping="Wrap" Margin="0,8,0,0" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>

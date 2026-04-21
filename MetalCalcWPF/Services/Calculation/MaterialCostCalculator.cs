@@ -48,6 +48,49 @@ namespace MetalCalcWPF.Services.Calculation
 
             result.MaterialCost = (decimal)totalWeightKg * sellPricePerKg;
 
+            // Прозрачная детализация: откуда взялась масса, какая наценка на материал.
+            var breakdown = new CalculationBreakdown
+            {
+                Section = "📦 Металл",
+                Subtitle = hasMeasuredWeight
+                    ? $"{request.Material.Name} / масса партии задана ({Math.Round(totalWeightKg, 2)} кг)"
+                    : $"{request.Material.Name} / {request.WidthMm}×{request.HeightMm}×{request.ThicknessMm} мм / ρ={request.Material.Density}",
+            };
+            if (hasMeasuredWeight)
+            {
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Масса партии",
+                    "указана оператором",
+                    (decimal)totalWeightKg, "кг"));
+            }
+            else
+            {
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Масса 1 шт",
+                    $"{request.WidthMm} × {request.HeightMm} × {request.ThicknessMm} × {request.Material.Density} / 1 000 000",
+                    (decimal)Math.Round(weightKgPerPart, 4), "кг"));
+                breakdown.Lines.Add(new BreakdownLine(
+                    $"Масса {request.Quantity} шт",
+                    $"{Math.Round(weightKgPerPart, 4)} × {request.Quantity}",
+                    (decimal)Math.Round(totalWeightKg, 4), "кг"));
+            }
+            breakdown.Lines.Add(new BreakdownLine(
+                "Закупочная цена",
+                $"{request.Material.Name}",
+                costPricePerKg, "тг/кг"));
+            if (settings.MaterialMarkupPercent != 0)
+            {
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Цена продажи за кг",
+                    $"{costPricePerKg} × (1 + {settings.MaterialMarkupPercent}% наценки)",
+                    Math.Round(sellPricePerKg, 2), "тг/кг"));
+            }
+            breakdown.Lines.Add(new BreakdownLine(
+                "Итого за металл",
+                $"{Math.Round(totalWeightKg, 2)} кг × {Math.Round(sellPricePerKg, 2)} тг/кг",
+                Math.Round(result.MaterialCost, 2), "тг", IsTotal: true));
+            result.Breakdowns.Add(breakdown);
+
             return hasMeasuredWeight
                 ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
                 : $"Metal({Math.Round(weightKgPerPart, 1)}kg x {request.Quantity}) ";

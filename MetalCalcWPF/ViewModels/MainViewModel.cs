@@ -7,6 +7,7 @@ using ClosedXML.Excel;
 using MetalCalcWPF.Infrastructure;
 using MetalCalcWPF.Models;
 using MetalCalcWPF.Services;
+using MetalCalcWPF.Services.Calculation;
 using MetalCalcWPF.Services.Interfaces;
 using MetalCalcWPF.Utilities;
 
@@ -61,6 +62,7 @@ namespace MetalCalcWPF.ViewModels
 
             Materials = new ObservableCollection<MaterialType>(_databaseService.GetMaterials());
             History = new ObservableCollection<OrderHistory>(_databaseService.GetRecentOrders());
+            Breakdowns = new ObservableCollection<CalculationBreakdown>();
             SelectedMaterial = Materials.FirstOrDefault();
 
             // ✅ Загружаем только активные профили проката
@@ -141,6 +143,19 @@ namespace MetalCalcWPF.ViewModels
         public ObservableCollection<MaterialType> Materials { get; }
         public ObservableCollection<OrderHistory> History { get; }
         public ObservableCollection<RolledProfile> RolledProfiles { get; }
+
+        /// <summary>
+        /// Прозрачная детализация последнего расчёта — секция на каждый
+        /// отработавший калькулятор (Металл / Лазер / Гибка / Сварка).
+        /// Рисуется в UI списком Expander'ов «🔍 Детализация расчёта».
+        /// </summary>
+        public ObservableCollection<CalculationBreakdown> Breakdowns { get; }
+
+        /// <summary>
+        /// True, если есть что показать в блоке «🔍 Детализация расчёта» —
+        /// скрывает Expander до первого успешного расчёта.
+        /// </summary>
+        public bool HasBreakdowns => Breakdowns.Count > 0;
         public ICollectionView RolledProfilesView { get; }
 
         public string RolledSearchText
@@ -422,9 +437,13 @@ namespace MetalCalcWPF.ViewModels
                 ResultDetails = $"Металл: {Math.Round(result.MaterialCost):N0} ₸\n" +
                                 $"Лазер: {Math.Round(result.LaserCost):N0} ₸\n" +
                                 $"Гибка: {Math.Round(result.BendingCost):N0} ₸\n" +
-                                $"Сварка: {Math.Round(result.WeldingCost):N0} ₸\n\n" +
-                                (!string.IsNullOrWhiteSpace(result.LaserDetails) ? ("Детали лазера: \n" + result.LaserDetails + "\n\n") : string.Empty) +
-                                (!string.IsNullOrWhiteSpace(result.WeldingDetails) ? ("Детали сварки: \n" + result.WeldingDetails) : string.Empty);
+                                $"Сварка: {Math.Round(result.WeldingCost):N0} ₸";
+
+                // Заменяем предыдущую детализацию новой (порядок секций = порядок пайплайна)
+                Breakdowns.Clear();
+                foreach (var section in result.Breakdowns)
+                    Breakdowns.Add(section);
+                OnPropertyChanged(nameof(HasBreakdowns));
 
                 if (result.TotalPrice > 0)
                 {

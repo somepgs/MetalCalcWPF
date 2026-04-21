@@ -74,6 +74,61 @@ namespace MetalCalcWPF.Services.Calculation
                 $"K={profile.MarkupCoefficient}; client/m={clientPerMeter:N2} тг | " +
                 $"cut(one)={cutChargePerOne:N2} тг; pierce(one)={pierceChargePerOne:N2} тг ({request.PiercesCount}×{profile.PiercePrice})";
 
+            // Прозрачная детализация расчёта (для UI-блока «🔍 Детализация расчёта»).
+            // Порядок строк = порядок формул из Excel «Лазер bodor» сверху вниз,
+            // чтобы оператор мог сверить каждую цифру с таблицей цеха.
+            var breakdown = new CalculationBreakdown
+            {
+                Section = "🔥 Лазер",
+                Subtitle = $"{request.ThicknessMm}мм / {(isAir ? "воздух" : "кислород")} / " +
+                           $"скорость {profile.CuttingSpeed} м/мин / K={profile.MarkupCoefficient}",
+            };
+            breakdown.Lines.Add(new BreakdownLine(
+                "Цена минуты",
+                isAir ? "Справочник B9 (воздух)" : "Справочник B10 (кислород)",
+                minutePrice, "тг/мин"));
+            breakdown.Lines.Add(new BreakdownLine(
+                "Минут на метр",
+                $"1 / {profile.CuttingSpeed} м/мин",
+                Math.Round(minutesPerMeter, 4), "мин/м"));
+            breakdown.Lines.Add(new BreakdownLine(
+                "Себестоимость метра",
+                $"{minutePrice:N2} × {minutesPerMeter:N4}",
+                Math.Round(costPerMeter, 2), "тг/м"));
+            breakdown.Lines.Add(new BreakdownLine(
+                "Цена клиенту за метр",
+                $"{costPerMeter:N2} × {profile.MarkupCoefficient} (K)",
+                Math.Round(clientPerMeter, 2), "тг/м"));
+            breakdown.Lines.Add(new BreakdownLine(
+                "Стоимость реза (1 шт)",
+                $"{clientPerMeter:N2} × {request.LaserLengthMeters} м",
+                Math.Round(cutChargePerOne, 2)));
+            if (request.PiercesCount > 0)
+            {
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Пробивки (1 шт)",
+                    $"{request.PiercesCount} × {profile.PiercePrice} тг",
+                    Math.Round(pierceChargePerOne, 2)));
+            }
+            breakdown.Lines.Add(new BreakdownLine(
+                "Итого за 1 шт",
+                request.PiercesCount > 0
+                    ? $"{cutChargePerOne:N2} + {pierceChargePerOne:N2}"
+                    : $"{cutChargePerOne:N2}",
+                Math.Round(laserPerOne, 2)));
+            if (request.Quantity > 1)
+            {
+                breakdown.Lines.Add(new BreakdownLine(
+                    $"Итого за {request.Quantity} шт",
+                    $"{laserPerOne:N2} × {request.Quantity}",
+                    Math.Round(result.LaserCost, 2), "тг", IsTotal: true));
+            }
+            else
+            {
+                breakdown.Lines[^1] = breakdown.Lines[^1] with { IsTotal = true };
+            }
+            result.Breakdowns.Add(breakdown);
+
             return $"+ Laser({request.PiercesCount}x pierce) ";
         }
     }
