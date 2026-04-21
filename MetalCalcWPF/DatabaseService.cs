@@ -603,5 +603,70 @@ namespace MetalCalcWPF
                 db.InsertAll(list);
             }
         }
+
+        // ✅ СТАНКИ РЕЗКИ (Спринт 2.2a)
+        public List<CuttingMachine> GetAllCuttingMachines()
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<CuttingMachine>()
+                         .OrderBy(m => m.Kind)
+                         .ThenBy(m => m.Name)
+                         .ToList();
+            }
+        }
+
+        public List<CuttingMachine> GetCuttingMachinesByKind(CuttingMachineKind kind)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Table<CuttingMachine>()
+                         .Where(m => m.Kind == kind)
+                         .OrderBy(m => m.Name)
+                         .ToList();
+            }
+        }
+
+        public CuttingMachine? GetCuttingMachineById(int id)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                return db.Find<CuttingMachine>(id);
+            }
+        }
+
+        public int AddCuttingMachine(CuttingMachine machine)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Insert(machine);
+                return machine.Id;
+            }
+        }
+
+        public void UpdateCuttingMachine(CuttingMachine machine)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Update(machine);
+            }
+        }
+
+        public void DeleteCuttingMachine(int id)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.Delete<CuttingMachine>(id);
+            }
+        }
+
+        public void UpdateAllCuttingMachines(List<CuttingMachine> list)
+        {
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                db.DeleteAll<CuttingMachine>();
+                db.InsertAll(list);
+            }
+        }
     }
 }

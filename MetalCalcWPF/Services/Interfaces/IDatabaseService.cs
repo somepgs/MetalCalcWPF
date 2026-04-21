@@ -37,5 +37,14 @@ namespace MetalCalcWPF.Services.Interfaces
         void UpdateRolledProfile(RolledProfile profile);
         void DeleteRolledProfile(int id);
         void UpdateAllRolledProfiles(List<RolledProfile> list);
+
+        // ✅ Станки резки (лазер, ленточная пила, пресс-ножницы, гильотина, болгарка)
+        List<CuttingMachine> GetAllCuttingMachines();
+        List<CuttingMachine> GetCuttingMachinesByKind(CuttingMachineKind kind);
+        CuttingMachine? GetCuttingMachineById(int id);
+        int AddCuttingMachine(CuttingMachine machine);
+        void UpdateCuttingMachine(CuttingMachine machine);
+        void DeleteCuttingMachine(int id);
+        void UpdateAllCuttingMachines(List<CuttingMachine> list);
     }
 }

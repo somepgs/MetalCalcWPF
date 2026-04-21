@@ -12,6 +12,11 @@
                 <x:Type TypeName="models:ProfileKind"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+        <ObjectDataProvider x:Key="CuttingMachineKindValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="models:CuttingMachineKind"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
         <infra:ProfileKindDisplayConverter x:Key="KindRu"/>
     </Window.Resources>
 
@@ -168,6 +173,57 @@
                             <DataGridCheckBoxColumn Header="П.-нож."  Binding="{Binding CanPressShears, UpdateSourceTrigger=PropertyChanged}" Width="60"/>
                             <DataGridCheckBoxColumn Header="Гильот."  Binding="{Binding CanGuillotine, UpdateSourceTrigger=PropertyChanged}"  Width="60"/>
                             <DataGridCheckBoxColumn Header="Болг."    Binding="{Binding CanAngleGrinder, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
+                            <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
+                            <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ✅ Спринт 2.2: Станки резки -->
+            <TabItem Header="⚙️ Станки резки">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                        <Button Content="➕ Добавить станок"
+                                Command="{Binding AddCuttingMachineCommand}"
+                                Padding="10,5" Margin="0,0,10,0"/>
+                        <Button Content="🗑 Удалить выбранный"
+                                Command="{Binding DeleteCuttingMachineCommand}"
+                                CommandParameter="{Binding ElementName=CuttingMachineGrid, Path=SelectedItem}"
+                                Padding="10,5"/>
+                        <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" FontStyle="Italic" Foreground="#666"
+                                   Text="Параметры станков используются в расчёте стоимости резки (подключение — Спринт 2.2b)."/>
+                    </StackPanel>
+
+                    <DataGrid x:Name="CuttingMachineGrid" Grid.Row="1"
+                              ItemsSource="{Binding CuttingMachines}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              HeadersVisibility="Column"
+                              RowHeight="28">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="200"/>
+                            <DataGridComboBoxColumn Header="Тип"
+                                                    SelectedItemBinding="{Binding Kind}"
+                                                    ItemsSource="{Binding Source={StaticResource CuttingMachineKindValues}}"
+                                                    Width="130"/>
+                            <DataGridTextColumn Header="ЗП оператора (тг/мес)"
+                                                Binding="{Binding OperatorMonthlySalary, StringFormat=N0}" Width="140"/>
+                            <DataGridTextColumn Header="Мощность (кВт)"
+                                                Binding="{Binding PowerConsumptionKw}" Width="110"/>
+                            <DataGridTextColumn Header="Аморт. (тг/ч)"
+                                                Binding="{Binding AmortizationPerHour, StringFormat=N0}" Width="105"/>
+                            <DataGridTextColumn Header="Setup (тг)"
+                                                Binding="{Binding SetupCostPerJob, StringFormat=N0}" Width="90"/>
+                            <DataGridTextColumn Header="Min заказ (тг)"
+                                                Binding="{Binding MinChargePerJob, StringFormat=N0}" Width="100"/>
+                            <DataGridTextColumn Header="Цена/м (override)"
+                                                Binding="{Binding PricePerMeterOverride, TargetNullValue=''}" Width="120"/>
                             <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
                             <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
                         </DataGrid.Columns>

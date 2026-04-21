@@ -25,6 +25,10 @@ namespace MetalCalcWPF.ViewModels
             BendingProfiles = new ObservableCollection<BendingProfile>(_databaseService.GetAllBendingProfiles());
             WeldingProfiles = new ObservableCollection<WeldingProfile>(_databaseService.GetAllWeldingProfiles()); // ✅
 
+            // --- ✅ СТАНКИ РЕЗКИ (Спринт 2.2) ---
+            CuttingMachines = new ObservableCollection<CuttingMachine>(_databaseService.GetAllCuttingMachines());
+            AllCuttingMachineKinds = Enum.GetValues<CuttingMachineKind>().ToList();
+
             // --- ✅ СОРТАМЕНТ ПРОКАТА ---
             RolledProfiles = new ObservableCollection<RolledProfile>(_databaseService.GetAllRolledProfiles());
             RolledProfilesView = CollectionViewSource.GetDefaultView(RolledProfiles);
@@ -43,6 +47,9 @@ namespace MetalCalcWPF.ViewModels
             SaveCommand = new RelayCommand(_ => Save());
             AddRolledProfileCommand = new RelayCommand(_ => AddRolledProfile());
             DeleteRolledProfileCommand = new RelayCommand(p => DeleteRolledProfile(p as RolledProfile));
+
+            AddCuttingMachineCommand = new RelayCommand(_ => AddCuttingMachine());
+            DeleteCuttingMachineCommand = new RelayCommand(m => DeleteCuttingMachine(m as CuttingMachine));
         }
 
         public ObservableCollection<MaterialType> Materials { get; }
@@ -71,9 +78,15 @@ namespace MetalCalcWPF.ViewModels
             }
         }
 
+        // --- ✅ СТАНКИ РЕЗКИ ---
+        public ObservableCollection<CuttingMachine> CuttingMachines { get; }
+        public List<CuttingMachineKind> AllCuttingMachineKinds { get; }
+
         public RelayCommand SaveCommand { get; }
         public RelayCommand AddRolledProfileCommand { get; }
         public RelayCommand DeleteRolledProfileCommand { get; }
+        public RelayCommand AddCuttingMachineCommand { get; }
+        public RelayCommand DeleteCuttingMachineCommand { get; }
 
         private void AddRolledProfile()
         {
@@ -83,7 +96,7 @@ namespace MetalCalcWPF.ViewModels
                 SizeCode = "новый",
                 GostDesignation = string.Empty,
                 WeightPerMeterKg = 0,
-                CompatibleMachines = (int)(CuttingMachines.BandSaw | CuttingMachines.AngleGrinder),
+                CompatibleMachines = (int)(Models.CuttingMachines.BandSaw | Models.CuttingMachines.AngleGrinder),
                 IsActive = true,
             };
             RolledProfiles.Add(rp);
@@ -97,13 +110,37 @@ namespace MetalCalcWPF.ViewModels
             RolledProfilesView.Refresh();
         }
 
+        private void AddCuttingMachine()
+        {
+            CuttingMachines.Add(new CuttingMachine
+            {
+                Name = "Новый станок",
+                Kind = CuttingMachineKind.Laser,
+                OperatorMonthlySalary = 400_000m,
+                PowerConsumptionKw = 20.0,
+                AmortizationPerHour = 500m,
+                SetupCostPerJob = 1000m,
+                MinChargePerJob = 500m,
+                PricePerMeterOverride = null,
+                IsActive = true,
+                Notes = string.Empty,
+            });
+        }
+
+        private void DeleteCuttingMachine(CuttingMachine? machine)
+        {
+            if (machine == null) return;
+            CuttingMachines.Remove(machine);
+        }
+
         private void Save()
         {
             _databaseService.UpdateAllMaterials(new List<MaterialType>(Materials));
             _databaseService.UpdateAllLaserProfiles(new List<MaterialProfile>(LaserProfiles));
             _databaseService.UpdateAllBendingProfiles(new List<BendingProfile>(BendingProfiles));
             _databaseService.UpdateAllWeldingProfiles(new List<WeldingProfile>(WeldingProfiles));
-            _databaseService.UpdateAllRolledProfiles(new List<RolledProfile>(RolledProfiles)); // ✅
+            _databaseService.UpdateAllRolledProfiles(new List<RolledProfile>(RolledProfiles));
+            _databaseService.UpdateAllCuttingMachines(new List<CuttingMachine>(CuttingMachines)); // ✅
 
             _messageService.ShowInfo("База данных успешно обновлена!");
         }
