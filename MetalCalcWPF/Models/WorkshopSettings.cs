@@ -23,6 +23,25 @@ namespace MetalCalcWPF.Models
         public decimal LaserMinChargePerJob { get; set; } = 500m;
         public double PierceTimeSeconds { get; set; } = 5;
 
+        // --- ✅ ЦЕНА МИНУТЫ РАБОТЫ ЛАЗЕРА (Excel-паритет, Спринт 2.2c) ---
+        //
+        // В Excel-исходнике («Справочник», B9/B10) цена минуты задаётся вручную как
+        // итоговое число: зарплата оператора + электричество + газ + расходники + амортизация
+        // уже зашиты внутрь одной цифры. Это сильно упрощает модель и соответствует
+        // реальной практике цеха в Алматы.
+        //
+        // Формула «Лазер bodor»:
+        //   Себестоимость метра = Цена минуты / Скорость резки
+        //   Цена клиенту за метр = Себестоимость метра × Коэффициент надбавки (из профиля).
+        //
+        // Значения 65 / 85 — из текущего рабочего Excel пользователя.
+
+        /// <summary>Цена минуты работы лазера на воздухе (тг/мин). Excel: Справочник!B9.</summary>
+        public decimal LaserAirMinutePrice { get; set; } = 65m;
+
+        /// <summary>Цена минуты работы лазера на кислороде (тг/мин). Excel: Справочник!B10.</summary>
+        public decimal LaserOxygenMinutePrice { get; set; } = 85m;
+
         // Параметры кислорода
         public double OxygenBottleVolumeLiters { get; set; } = 40;
         public double OxygenBottlePressureAtm { get; set; } = 150;
@@ -109,6 +128,12 @@ namespace MetalCalcWPF.Models
         public decimal MaterialMarkupPercent { get; set; } = 30.0m;
 
         // --- МЕТОДЫ РАСЧЕТА ---
+
+        /// <summary>
+        /// Цена минуты работы лазера (Excel-паритет): фиксированная цифра из настроек.
+        /// </summary>
+        public decimal GetLaserMinutePrice(bool isAirCutting) =>
+            isAirCutting ? LaserAirMinutePrice : LaserOxygenMinutePrice;
 
         /// <summary>
         /// Стоимость часа ЛАЗЕРА
