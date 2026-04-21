@@ -12,6 +12,7 @@ namespace MetalCalcWPF.Services.Interfaces
             int piercesCount,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
-            double measuredWeightKg = 0);
+            double measuredWeightKg = 0,
+            int? cuttingMachineId = null);
     }
 }

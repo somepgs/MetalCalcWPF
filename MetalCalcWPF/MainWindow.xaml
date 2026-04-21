@@ -211,6 +211,19 @@
                 <TabControl Grid.Row="2" Margin="0,0,0,10">
                     <TabItem Header="🔥 Лазер">
                         <StackPanel Margin="10">
+                            <!-- ✅ Спринт 2.2b: выбор конкретного лазерного станка.
+                                 Блок скрыт, если в справочнике нет активных лазеров —
+                                 тогда расчёт идёт по чистой Excel-формуле без Setup/MinCharge. -->
+                            <StackPanel Margin="0,0,0,10"
+                                        Visibility="{Binding HasLaserMachines, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Станок:" FontWeight="Bold"/>
+                                <ComboBox Height="25" Margin="0,5,0,0"
+                                          ItemsSource="{Binding LaserMachines}"
+                                          SelectedItem="{Binding SelectedLaserMachine}"
+                                          DisplayMemberPath="Name"
+                                          ToolTip="Влияет на Setup / MinCharge / PricePerMeterOverride из справочника станков"/>
+                            </StackPanel>
+
                             <TextBlock Text="Длина контура:"/>
                             <Grid Margin="0,5,0,10">
                                 <Grid.ColumnDefinitions>

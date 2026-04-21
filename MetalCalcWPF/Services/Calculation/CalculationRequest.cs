@@ -34,5 +34,14 @@ namespace MetalCalcWPF.Services.Calculation
         /// (длина × кг/м × кол-во).
         /// </summary>
         public double MeasuredWeightKg { get; init; }
+
+        /// <summary>
+        /// ID выбранного лазерного станка из таблицы <see cref="CuttingMachine"/>.
+        /// Если null — <c>LaserCostCalculator</c> сам берёт первый активный станок
+        /// с <see cref="CuttingMachineKind.Laser"/>, а если станков нет — работает
+        /// по чистой Excel-формуле без машинных добавок (Setup / MinCharge / Override).
+        /// Добавлено в Спринте 2.2b.
+        /// </summary>
+        public int? CuttingMachineId { get; init; }
     }
 }
