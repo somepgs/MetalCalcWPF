@@ -76,6 +76,29 @@ namespace MetalCalcWPF.Tests
                 RolledProfiles.RemoveAll(p => p.Id == id);
             }
             public void UpdateAllRolledProfiles(List<RolledProfile> list) { RolledProfiles = list; }
+
+            public List<CuttingMachine> CuttingMachines { get; set; } = new List<CuttingMachine>();
+            public List<CuttingMachine> GetAllCuttingMachines() => CuttingMachines;
+            public List<CuttingMachine> GetCuttingMachinesByKind(CuttingMachineKind kind)
+            {
+                var result = new List<CuttingMachine>();
+                foreach (var m in CuttingMachines) if (m.Kind == kind) result.Add(m);
+                return result;
+            }
+            public CuttingMachine? GetCuttingMachineById(int id)
+            {
+                foreach (var m in CuttingMachines) if (m.Id == id) return m;
+                return null;
+            }
+            public int AddCuttingMachine(CuttingMachine machine)
+            {
+                machine.Id = CuttingMachines.Count + 1;
+                CuttingMachines.Add(machine);
+                return machine.Id;
+            }
+            public void UpdateCuttingMachine(CuttingMachine machine) { }
+            public void DeleteCuttingMachine(int id) { CuttingMachines.RemoveAll(m => m.Id == id); }
+            public void UpdateAllCuttingMachines(List<CuttingMachine> list) { CuttingMachines = list; }
         }
 
         [TestMethod]

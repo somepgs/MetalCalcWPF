@@ -27,7 +27,8 @@ namespace MetalCalcWPF.Infrastructure.Migrations
         public static IReadOnlyList<IMigration> GetAllMigrations() => new IMigration[]
         {
             new V001_InitialSchema(),
-            // new V002_Xxx(),
+            new V002_AddCuttingMachines(),
+            // new V003_Xxx(),
         };
 
         /// <summary>
