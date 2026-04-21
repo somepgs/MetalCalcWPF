@@ -134,14 +134,101 @@ namespace MetalCalcWPF.Tests
             Assert.IsTrue(r5.LaserCost > r0.LaserCost);
         }
 
+        /// <summary>
+        /// Excel-паритет (Спринт 2.2c): для 16мм × 1м с коэффициентом 40 и скоростью 1.4 м/мин
+        /// цена кислородной минуты 85 тг/мин должна давать ровно 2428.57 тг
+        /// — как в рабочем Excel-исходнике («Лазер bodor», строка 14).
+        /// Регрессия против бага, когда коэффициент трактовался как процент (×1.4 вместо ×40).
+        /// </summary>
         [TestMethod]
-        public void MinChargeApplies()
+        public void Laser_16mm_1m_MatchesExcel_2428_57()
         {
             var db = new FakeDb();
-            db.Settings.LaserMinChargePerJob = 10000;
+            db.Profiles.Clear();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 16,
+                GasType = "Oxygen",
+                CuttingSpeed = 1.4,
+                PiercePrice = 130,
+                MarkupCoefficient = 40,
+            });
+            db.Settings.LaserOxygenMinutePrice = 85m;
+            db.Settings.MaterialMarkupPercent = 0;
+
             var svc = new CalculationService(db);
-            var r = svc.CalculateOrder(100,100,1,1,new MaterialType { Name = "St", Density=7.85, BasePricePerKg=1000}, 0.01, 0, false,0,0,false,0,0);
-            Assert.IsTrue(r.LaserCost >= db.Settings.LaserMinChargePerJob);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            var r = svc.CalculateOrder(100, 100, 16, 1, mat,
+                laserLengthMeters: 1.0, piercesCount: 0,
+                useBending: false, bendsCount: 0, bendLengthMm: 0,
+                useWelding: false, weldLengthCm: 0);
+
+            Assert.AreEqual(2428.57m, Math.Round(r.LaserCost, 2),
+                "Формула Excel: (85 / 1.4) × 40 = 2428.571 тг");
+        }
+
+        /// <summary>
+        /// Коэффициент надбавки — прямой множитель: при K=40 цена реза должна быть
+        /// ровно в 40 раз больше себестоимости, а не в 1.4 раза (старый баг с процентом).
+        /// </summary>
+        [TestMethod]
+        public void Laser_MarkupCoefficient_IsDirectMultiplier_NotPercent()
+        {
+            var db = new FakeDb();
+            db.Profiles.Clear();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 10,
+                GasType = "Air",
+                CuttingSpeed = 10.0,
+                PiercePrice = 0,
+                MarkupCoefficient = 40,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;
+            db.Settings.MaterialMarkupPercent = 0;
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            var r = svc.CalculateOrder(100, 100, 10, 1, mat,
+                laserLengthMeters: 1.0, piercesCount: 0,
+                useBending: false, bendsCount: 0, bendLengthMm: 0,
+                useWelding: false, weldLengthCm: 0);
+
+            // Себест = 50 / 10 = 5 тг/м. Клиент = 5 × 40 = 200 тг/м. За 1м → 200 тг.
+            Assert.AreEqual(200m, Math.Round(r.LaserCost, 2));
+        }
+
+        /// <summary>
+        /// Пробивки в новой модели складываются «как есть» и НЕ умножаются на коэффициент:
+        /// в Excel столбец E («Цена за 1 пробивку») — уже клиентская цена.
+        /// </summary>
+        [TestMethod]
+        public void Laser_PiercesAddedFlat_NotMarkedUp()
+        {
+            var db = new FakeDb();
+            db.Profiles.Clear();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 5,
+                GasType = "Air",
+                CuttingSpeed = 10.0,
+                PiercePrice = 100,
+                MarkupCoefficient = 40,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;
+            db.Settings.MaterialMarkupPercent = 0;
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            var r0 = svc.CalculateOrder(100,100,5,1,mat, 1.0, 0, false,0,0,false,0,0);
+            var r3 = svc.CalculateOrder(100,100,5,1,mat, 1.0, 3, false,0,0,false,0,0);
+
+            Assert.AreEqual(200m, Math.Round(r0.LaserCost, 2));
+            Assert.AreEqual(500m, Math.Round(r3.LaserCost, 2),
+                "Каждая пробивка добавляет ровно PiercePrice (100 тг), без наценки");
         }
 
         [TestMethod]

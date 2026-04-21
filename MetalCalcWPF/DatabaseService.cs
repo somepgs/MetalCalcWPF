@@ -80,31 +80,35 @@ namespace MetalCalcWPF
                 // --- АВТО-ЗАПОЛНЕНИЕ ЛАЗЕРА ---
                 if (db.Table<MaterialProfile>().Count() == 0)
                 {
+                    // ✅ Значения скорости/пробивки/коэффициента — из рабочего Excel-исходника
+                    // («Лазер bodor», строки 2–22). Считаются по формуле
+                    //   клиент/м = (Цена_минуты / Скорость) × Коэффициент.
+                    // Цена минуты берётся из WorkshopSettings (Air=65, O2=85 по умолчанию).
                     var list = new System.Collections.Generic.List<MaterialProfile>
                     {
                         // Воздух
-                        new MaterialProfile { Thickness = 0.5, GasType = "Air", CuttingSpeed = 25.0, PiercePrice = 10, MarkupCoefficient = 150 },
-                        new MaterialProfile { Thickness = 1.0, GasType = "Air", CuttingSpeed = 25.0, PiercePrice = 20, MarkupCoefficient = 140 },
-                        new MaterialProfile { Thickness = 1.5, GasType = "Air", CuttingSpeed = 20.0, PiercePrice = 30, MarkupCoefficient = 130 },
-                        new MaterialProfile { Thickness = 2.0, GasType = "Air", CuttingSpeed = 20.0, PiercePrice = 40, MarkupCoefficient = 120 },
-                        new MaterialProfile { Thickness = 3.0, GasType = "Air", CuttingSpeed = 20.0, PiercePrice = 50, MarkupCoefficient = 110 },
-                        new MaterialProfile { Thickness = 4.0, GasType = "Air", CuttingSpeed = 18.0, PiercePrice = 60, MarkupCoefficient = 100 },
-                        new MaterialProfile { Thickness = 5.0, GasType = "Air", CuttingSpeed = 17.0, PiercePrice = 70, MarkupCoefficient = 90 },
-                        new MaterialProfile { Thickness = 6.0, GasType = "Air", CuttingSpeed = 12.0,  PiercePrice = 80, MarkupCoefficient = 80 },
-                        new MaterialProfile { Thickness = 8.0, GasType = "Air", CuttingSpeed = 9.4,  PiercePrice = 90, MarkupCoefficient = 70 },
-                        new MaterialProfile { Thickness = 10.0, GasType = "Air", CuttingSpeed = 6.0, PiercePrice = 100, MarkupCoefficient = 60 },
+                        new MaterialProfile { Thickness = 0.5, GasType = "Air", CuttingSpeed = 30.0,  PiercePrice = 10,  MarkupCoefficient = 150 },
+                        new MaterialProfile { Thickness = 1.0, GasType = "Air", CuttingSpeed = 25.0,  PiercePrice = 20,  MarkupCoefficient = 140 },
+                        new MaterialProfile { Thickness = 1.5, GasType = "Air", CuttingSpeed = 22.0,  PiercePrice = 30,  MarkupCoefficient = 130 },
+                        new MaterialProfile { Thickness = 2.0, GasType = "Air", CuttingSpeed = 20.0,  PiercePrice = 40,  MarkupCoefficient = 120 },
+                        new MaterialProfile { Thickness = 3.0, GasType = "Air", CuttingSpeed = 15.0,  PiercePrice = 50,  MarkupCoefficient = 110 },
+                        new MaterialProfile { Thickness = 4.0, GasType = "Air", CuttingSpeed = 13.0,  PiercePrice = 60,  MarkupCoefficient = 100 },
+                        new MaterialProfile { Thickness = 5.0, GasType = "Air", CuttingSpeed = 11.2,  PiercePrice = 70,  MarkupCoefficient = 90  },
+                        new MaterialProfile { Thickness = 6.0, GasType = "Air", CuttingSpeed = 8.0,   PiercePrice = 80,  MarkupCoefficient = 80  },
+                        new MaterialProfile { Thickness = 8.0, GasType = "Air", CuttingSpeed = 5.5,   PiercePrice = 90,  MarkupCoefficient = 70  },
+                        new MaterialProfile { Thickness = 10.0,GasType = "Air", CuttingSpeed = 3.5,   PiercePrice = 100, MarkupCoefficient = 60  },
 
                         // Кислород
                         new MaterialProfile { Thickness = 12.0, GasType = "Oxygen", CuttingSpeed = 1.8, PiercePrice = 110, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 14.0, GasType = "Oxygen", CuttingSpeed = 1.7, PiercePrice = 120, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 16.0, GasType = "Oxygen", CuttingSpeed = 1.5, PiercePrice = 130, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 18.0, GasType = "Oxygen", CuttingSpeed = 1.25, PiercePrice = 140, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 20.0, GasType = "Oxygen", CuttingSpeed = 1.1, PiercePrice = 150, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 22.0, GasType = "Oxygen", CuttingSpeed = 1.1, PiercePrice = 160, MarkupCoefficient = 40 },
-                        new MaterialProfile { Thickness = 25.0, GasType = "Oxygen", CuttingSpeed = 0.8, PiercePrice = 170, MarkupCoefficient = 35 },
+                        new MaterialProfile { Thickness = 14.0, GasType = "Oxygen", CuttingSpeed = 1.6, PiercePrice = 120, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 16.0, GasType = "Oxygen", CuttingSpeed = 1.4, PiercePrice = 130, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 18.0, GasType = "Oxygen", CuttingSpeed = 1.2, PiercePrice = 140, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 20.0, GasType = "Oxygen", CuttingSpeed = 1.0, PiercePrice = 150, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 22.0, GasType = "Oxygen", CuttingSpeed = 0.9, PiercePrice = 160, MarkupCoefficient = 40 },
+                        new MaterialProfile { Thickness = 25.0, GasType = "Oxygen", CuttingSpeed = 0.7, PiercePrice = 170, MarkupCoefficient = 35 },
                         new MaterialProfile { Thickness = 30.0, GasType = "Oxygen", CuttingSpeed = 0.5, PiercePrice = 180, MarkupCoefficient = 35 },
-                        new MaterialProfile { Thickness = 32.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 190, MarkupCoefficient = 35 },
-                        new MaterialProfile { Thickness = 35.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 200, MarkupCoefficient = 35 },
+                        new MaterialProfile { Thickness = 32.0, GasType = "Oxygen", CuttingSpeed = 0.4, PiercePrice = 190, MarkupCoefficient = 35 },
+                        new MaterialProfile { Thickness = 36.0, GasType = "Oxygen", CuttingSpeed = 0.3, PiercePrice = 200, MarkupCoefficient = 35 },
                         new MaterialProfile { Thickness = 40.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 210, MarkupCoefficient = 35 },
                     };
                     db.InsertAll(list);
