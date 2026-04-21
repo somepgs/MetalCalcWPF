@@ -29,6 +29,18 @@ namespace MetalCalcWPF.Services
         public string Log { get; set; } = string.Empty;
         public string LaserDetails { get; set; } = string.Empty;
         public string WeldingDetails { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Прозрачная детализация расчёта по секциям (Металл / Лазер / Гибка / Сварка).
+        /// Каждая запись — цепочка шагов формулы с подписями и значениями,
+        /// которую UI отображает в разворачивающемся блоке «🔍 Детализация расчёта».
+        /// <para>
+        /// Секции добавляются калькуляторами в том порядке, в котором они применяются
+        /// (см. <see cref="CalculationService.BuildPipeline"/>), поэтому пользователь
+        /// видит их сверху вниз именно так, как считаем: металл → лазер → гибка → сварка.
+        /// </para>
+        /// </summary>
+        public List<CalculationBreakdown> Breakdowns { get; } = new();
     }
 
     /// <summary>

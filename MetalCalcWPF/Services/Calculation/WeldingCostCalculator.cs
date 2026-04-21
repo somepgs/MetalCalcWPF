@@ -76,6 +76,47 @@ namespace MetalCalcWPF.Services.Calculation
                     $"gas={Math.Round((double)gasCost, 2)}тг; labor={Math.Round((double)laborCost, 2)}тг; consumables={Math.Round((double)consumablesCost, 2)}тг | " +
                     $"base={Math.Round((double)baseCost, 2)}тг; markup={markup}x; total={Math.Round((double)weldTotal):N0} тг";
 
+                var breakdown = new CalculationBreakdown
+                {
+                    Section = "🏗️ Сварка",
+                    Subtitle = $"катет {weldProfile.FilletSize} мм / скорость {weldProfile.WeldingSpeed} см/мин / длина {request.WeldLengthCm} см × {request.Quantity} шт",
+                };
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Время сварки",
+                    $"{request.WeldLengthCm} см / {weldProfile.WeldingSpeed} см/мин",
+                    (decimal)Math.Round(weldTimeMinutes, 2), "мин"));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Проволока",
+                    $"{Math.Round(totalWireGrams, 2)} г × {settings.WeldingWirePricePerKg} тг/кг / 1000",
+                    Math.Round(wireCost, 2)));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Газ",
+                    $"{Math.Round(weldTimeMinutes, 2)} мин × цена газа/мин",
+                    Math.Round(gasCost, 2)));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Зарплата сварщика",
+                    $"{Math.Round(weldTimeMinutes, 2)} мин × ставка/мин",
+                    Math.Round(laborCost, 2)));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Расходники",
+                    $"{Math.Round(weldTimeMinutes, 2)} мин × бюджет/мин",
+                    Math.Round(consumablesCost, 2)));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Себестоимость (без наценки)",
+                    "проволока + газ + зп + расходники",
+                    Math.Round(baseCost, 2)));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "С наценкой",
+                    $"{Math.Round(baseCost, 2)} × {markup}",
+                    Math.Round(priceWithMarkup, 2)));
+                breakdown.Lines.Add(new BreakdownLine(
+                    $"Итого за сварку ({request.Quantity} шт)",
+                    request.Quantity > 1
+                        ? $"{Math.Round(priceWithMarkup, 2)} × {request.Quantity}"
+                        : $"{Math.Round(priceWithMarkup, 2)}",
+                    Math.Round(weldTotal, 2), "тг", IsTotal: true));
+                result.Breakdowns.Add(breakdown);
+
                 return $"+ Weld({request.WeldLengthCm}cm, {weldProfile.FilletSize}mm) ";
             }
             else
@@ -86,6 +127,21 @@ namespace MetalCalcWPF.Services.Calculation
 
                 result.WeldingDetails =
                     $"Упрощенный расчет: {request.WeldLengthCm}см × {settings.WeldingCostPerCm} тг/см × {request.Quantity}шт = {Math.Round(weldTotal):N0} тг";
+
+                var breakdown = new CalculationBreakdown
+                {
+                    Section = "🏗️ Сварка",
+                    Subtitle = $"упрощённый расчёт (нет профиля по толщине {request.ThicknessMm} мм)",
+                };
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Цена за см",
+                    "Настройки цеха",
+                    settings.WeldingCostPerCm, "тг/см"));
+                breakdown.Lines.Add(new BreakdownLine(
+                    "Итого за сварку",
+                    $"{request.WeldLengthCm} см × {settings.WeldingCostPerCm} × {request.Quantity} шт",
+                    Math.Round(weldTotal, 2), "тг", IsTotal: true));
+                result.Breakdowns.Add(breakdown);
 
                 return $"+ Weld({request.WeldLengthCm}cm, basic) ";
             }
