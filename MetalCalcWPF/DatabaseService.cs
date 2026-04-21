@@ -5,23 +5,33 @@ using System.Linq;
 using MetalCalcWPF.Infrastructure.Migrations;
 using MetalCalcWPF.Models;
 using MetalCalcWPF.Services.Interfaces;
+using MetalCalcWPF.Services.Logging;
 
 namespace MetalCalcWPF
 {
     public class DatabaseService : IDatabaseService
     {
         private readonly string _dbPath;
+        private readonly IAppLogger _log;
 
-        public DatabaseService() : this(BuildDefaultDbPath())
+        public DatabaseService() : this(BuildDefaultDbPath(), NullAppLogger.Instance)
         {
         }
 
         /// <summary>
-        /// Конструктор с явным путём — используется тестами.
+        /// Конструктор с явным путём — используется тестами и при ручной DI.
         /// </summary>
-        public DatabaseService(string dbPath)
+        public DatabaseService(string dbPath) : this(dbPath, NullAppLogger.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Полный конструктор: путь к БД + логгер.
+        /// </summary>
+        public DatabaseService(string dbPath, IAppLogger log)
         {
             _dbPath = dbPath;
+            _log = log ?? NullAppLogger.Instance;
 
             // 1) Гарантируем, что папка для БД существует (если это файл, а не :memory:).
             if (!string.Equals(dbPath, ":memory:", System.StringComparison.Ordinal))
@@ -32,10 +42,24 @@ namespace MetalCalcWPF
             }
 
             // 2) Прокатываем миграции, затем заполняем справочники (если пусто).
+            _log.Info("DatabaseService: открываем БД {0}", dbPath);
             using (var db = new SQLiteConnection(_dbPath))
             {
-                MigrationRunner.Run(db);
-                SeedIfEmpty(db);
+                try
+                {
+                    var applied = MigrationRunner.Run(db);
+                    if (applied.Count > 0)
+                        _log.Info("Миграции применены: {0}", string.Join(", ", applied.Select(v => "v" + v)));
+                    else
+                        _log.Info("Миграции: все уже применены, изменений нет.");
+
+                    SeedIfEmpty(db);
+                }
+                catch (System.Exception ex)
+                {
+                    _log.Exception(ex, "Сбой инициализации БД");
+                    throw;
+                }
             }
         }
 
