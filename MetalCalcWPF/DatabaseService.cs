@@ -2,6 +2,7 @@ using SQLite;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using MetalCalcWPF.Infrastructure.Migrations;
 using MetalCalcWPF.Models;
 using MetalCalcWPF.Services.Interfaces;
 
@@ -11,29 +12,47 @@ namespace MetalCalcWPF
     {
         private readonly string _dbPath;
 
-        public DatabaseService()
+        public DatabaseService() : this(BuildDefaultDbPath())
+        {
+        }
+
+        /// <summary>
+        /// Конструктор с явным путём — используется тестами.
+        /// </summary>
+        public DatabaseService(string dbPath)
+        {
+            _dbPath = dbPath;
+
+            // 1) Гарантируем, что папка для БД существует (если это файл, а не :memory:).
+            if (!string.Equals(dbPath, ":memory:", System.StringComparison.Ordinal))
+            {
+                var folder = Path.GetDirectoryName(dbPath);
+                if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
+            }
+
+            // 2) Прокатываем миграции, затем заполняем справочники (если пусто).
+            using (var db = new SQLiteConnection(_dbPath))
+            {
+                MigrationRunner.Run(db);
+                SeedIfEmpty(db);
+            }
+        }
+
+        private static string BuildDefaultDbPath()
         {
             string docFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string appFolder = Path.Combine(docFolder, "MetalCalc");
+            return Path.Combine(appFolder, "workshop.db");
+        }
 
-            if (!Directory.Exists(appFolder))
+        /// <summary>
+        /// Заполняет справочные таблицы стартовыми данными, если они пусты.
+        /// Безопасно вызывать многократно — на втором запуске не делает ничего.
+        /// </summary>
+        private static void SeedIfEmpty(SQLiteConnection db)
+        {
             {
-                Directory.CreateDirectory(appFolder);
-            }
-
-            _dbPath = Path.Combine(appFolder, "workshop.db");
-
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                // Создаем таблицы
-                db.CreateTable<WorkshopSettings>();
-                db.CreateTable<MaterialProfile>();
-                db.CreateTable<OrderHistory>();
-                db.CreateTable<BendingProfile>();
-                db.CreateTable<MaterialType>();
-                db.CreateTable<WeldingProfile>(); // ✅ НОВАЯ ТАБЛИЦА
-                db.CreateTable<RolledProfile>(); // ✅ Сортамент проката
-
                 // --- АВТО-ЗАПОЛНЕНИЕ ЛАЗЕРА ---
                 if (db.Table<MaterialProfile>().Count() == 0)
                 {
