@@ -1,14 +1,36 @@
-using SQLite;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using SQLite;
 using MetalCalcWPF.Infrastructure.Migrations;
+using MetalCalcWPF.Infrastructure.Persistence;
 using MetalCalcWPF.Models;
 using MetalCalcWPF.Services.Interfaces;
 using MetalCalcWPF.Services.Logging;
 
 namespace MetalCalcWPF
 {
+    /// <summary>
+    /// Реализация <see cref="IDatabaseService"/> на EF Core + SQLite.
+    ///
+    /// <para>История: до Спринта 2.3-0 сервис работал через <c>sqlite-net-pcl</c>.
+    /// Миграция на EF Core сделана ради будущего переезда на PostgreSQL
+    /// (клиент-серверная ERP) — EF Core даёт единый API и простую смену
+    /// провайдера БД через строку подключения.</para>
+    ///
+    /// <para>Важно: файловый формат БД не меняется — EF Core и sqlite-net-pcl
+    /// оба используют одну и ту же native библиотеку <c>SQLitePCLRaw</c>, поэтому
+    /// существующие файлы <c>workshop.db</c> у пользователей открываются
+    /// без конвертации. Схема таблиц тождественна благодаря Fluent-маппингу
+    /// в <see cref="AppDbContext"/>.</para>
+    ///
+    /// <para>Инициализация БД (создание таблиц и миграции) пока выполняется
+    /// через <c>SQLiteConnection</c> + <see cref="MigrationRunner"/> —
+    /// это временное сосуществование, которое будет заменено на EF Core
+    /// в следующей фазе. Разделение сделано намеренно: сначала переводим CRUD
+    /// (большая часть поверхности API), затем отдельным шагом — миграции.</para>
+    /// </summary>
     public class DatabaseService : IDatabaseService
     {
         private readonly string _dbPath;
@@ -42,6 +64,8 @@ namespace MetalCalcWPF
             }
 
             // 2) Прокатываем миграции, затем заполняем справочники (если пусто).
+            //    Пока MigrationRunner работает на SQLiteConnection — миграция этого
+            //    слоя на EF Core запланирована следующим шагом Спринта 2.3-0.
             _log.Info("DatabaseService: открываем БД {0}", dbPath);
             using (var db = new SQLiteConnection(_dbPath))
             {
@@ -68,6 +92,19 @@ namespace MetalCalcWPF
             string docFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string appFolder = Path.Combine(docFolder, "MetalCalc");
             return Path.Combine(appFolder, "workshop.db");
+        }
+
+        /// <summary>
+        /// Создаёт свежий EF Core контекст под текущий путь к БД.
+        /// Используется в каждом CRUD-методе через <c>using</c>, чтобы
+        /// избежать долгоживущих change tracker-ов и проблем с многопоточностью.
+        /// </summary>
+        private AppDbContext CreateContext()
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite($"Data Source={_dbPath}")
+                .Options;
+            return new AppDbContext(options);
         }
 
         /// <summary>
@@ -144,28 +181,20 @@ namespace MetalCalcWPF
                     {
                         // Катет 3мм
                         new WeldingProfile { FilletSize = 3.0, WeldingSpeed = 45, WeightPerCm = 0.7, CostPerCm = 4.50m, PricePerCm = 13.51m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 4мм
                         new WeldingProfile { FilletSize = 4.0, WeldingSpeed = 35, WeightPerCm = 1.1, CostPerCm = 6.10m, PricePerCm = 18.29m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 5мм
                         new WeldingProfile { FilletSize = 5.0, WeldingSpeed = 25, WeightPerCm = 1.8, CostPerCm = 8.93m, PricePerCm = 26.80m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 6мм
                         new WeldingProfile { FilletSize = 6.0, WeldingSpeed = 20, WeightPerCm = 2.7, CostPerCm = 11.85m, PricePerCm = 35.56m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 8мм
                         new WeldingProfile { FilletSize = 8.0, WeldingSpeed = 14, WeightPerCm = 4.7, CostPerCm = 18.22m, PricePerCm = 54.67m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 10мм
                         new WeldingProfile { FilletSize = 10.0, WeldingSpeed = 9, WeightPerCm = 7.2, CostPerCm = 28.18m, PricePerCm = 84.54m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 12мм
                         new WeldingProfile { FilletSize = 12.0, WeldingSpeed = 6, WeightPerCm = 10.5, CostPerCm = 41.81m, PricePerCm = 125.43m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 16мм
                         new WeldingProfile { FilletSize = 16.0, WeldingSpeed = 4, WeightPerCm = 19.0, CostPerCm = 67.69m, PricePerCm = 203.06m, MarkupCoefficient = 3.0 },
-                        
                         // Катет 20мм
                         new WeldingProfile { FilletSize = 20.0, WeldingSpeed = 3, WeightPerCm = 30.0, CostPerCm = 107.69m, PricePerCm = 323.06m, MarkupCoefficient = 3.0 },
                     };
@@ -388,289 +417,269 @@ namespace MetalCalcWPF
             return list;
         }
 
+        // =================== НАСТРОЙКИ ЦЕХА ===================
+
         public WorkshopSettings GetSettings()
         {
-            using (var db = new SQLiteConnection(_dbPath))
+            using var ctx = CreateContext();
+            var settings = ctx.WorkshopSettings.FirstOrDefault();
+            if (settings == null)
             {
-                var settings = db.Table<WorkshopSettings>().FirstOrDefault();
-                if (settings == null)
-                {
-                    settings = new WorkshopSettings();
-                    db.Insert(settings);
-                }
-                return settings;
+                settings = new WorkshopSettings();
+                ctx.WorkshopSettings.Add(settings);
+                ctx.SaveChanges();
             }
+            return settings;
         }
 
         public void SaveSettings(WorkshopSettings settings)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.Update(settings);
-            }
+            using var ctx = CreateContext();
+            ctx.WorkshopSettings.Update(settings);
+            ctx.SaveChanges();
         }
+
+        // =================== ПРОФИЛИ ЛАЗЕРА ===================
 
         public MaterialProfile GetProfileByThickness(double thickness)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<MaterialProfile>()
-                         .Where(p => p.Thickness >= thickness)
-                         .OrderBy(p => p.Thickness)
-                         .FirstOrDefault();
-            }
+            using var ctx = CreateContext();
+            return ctx.MaterialProfiles
+                      .Where(p => p.Thickness >= thickness)
+                      .OrderBy(p => p.Thickness)
+                      .FirstOrDefault()!;
         }
+
+        public List<MaterialProfile> GetAllLaserProfiles()
+        {
+            using var ctx = CreateContext();
+            return ctx.MaterialProfiles.OrderBy(p => p.Thickness).ToList();
+        }
+
+        public void UpdateAllLaserProfiles(List<MaterialProfile> list)
+        {
+            using var ctx = CreateContext();
+            ctx.MaterialProfiles.ExecuteDelete();
+            ctx.MaterialProfiles.AddRange(list);
+            ctx.SaveChanges();
+        }
+
+        // =================== ПРОФИЛИ ГИБКИ ===================
 
         public BendingProfile GetBendingProfile(double thickness)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<BendingProfile>()
-                         .Where(p => p.Thickness >= thickness)
-                         .OrderBy(p => p.Thickness)
-                         .FirstOrDefault();
-            }
+            using var ctx = CreateContext();
+            return ctx.BendingProfiles
+                      .Where(p => p.Thickness >= thickness)
+                      .OrderBy(p => p.Thickness)
+                      .FirstOrDefault()!;
         }
 
-        // ✅ НОВЫЙ МЕТОД: Найти профиль сварки по толщине металла
+        public List<BendingProfile> GetAllBendingProfiles()
+        {
+            using var ctx = CreateContext();
+            return ctx.BendingProfiles.OrderBy(p => p.Thickness).ToList();
+        }
+
+        public void UpdateAllBendingProfiles(List<BendingProfile> list)
+        {
+            using var ctx = CreateContext();
+            ctx.BendingProfiles.ExecuteDelete();
+            ctx.BendingProfiles.AddRange(list);
+            ctx.SaveChanges();
+        }
+
+        // =================== ПРОФИЛИ СВАРКИ ===================
+
         public WeldingProfile GetWeldingProfile(double thickness)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                // Катет шва обычно = 0.7 × Толщина металла
-                double estimatedFillet = thickness * 0.7;
-                
-                return db.Table<WeldingProfile>()
-                         .Where(p => p.FilletSize >= estimatedFillet)
-                         .OrderBy(p => p.FilletSize)
-                         .FirstOrDefault();
-            }
+            using var ctx = CreateContext();
+            // Катет шва обычно = 0.7 × Толщина металла
+            double estimatedFillet = thickness * 0.7;
+
+            return ctx.WeldingProfiles
+                      .Where(p => p.FilletSize >= estimatedFillet)
+                      .OrderBy(p => p.FilletSize)
+                      .FirstOrDefault()!;
         }
+
+        public List<WeldingProfile> GetAllWeldingProfiles()
+        {
+            using var ctx = CreateContext();
+            return ctx.WeldingProfiles.OrderBy(p => p.FilletSize).ToList();
+        }
+
+        public void UpdateAllWeldingProfiles(List<WeldingProfile> list)
+        {
+            using var ctx = CreateContext();
+            ctx.WeldingProfiles.ExecuteDelete();
+            ctx.WeldingProfiles.AddRange(list);
+            ctx.SaveChanges();
+        }
+
+        // =================== ИСТОРИЯ ЗАКАЗОВ ===================
 
         public void SaveOrder(OrderHistory order)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.Insert(order);
-            }
+            using var ctx = CreateContext();
+            ctx.OrderHistory.Add(order);
+            ctx.SaveChanges();
         }
 
         public void DeleteOrder(int id)
         {
-            using (var db = new SQLiteConnection(_dbPath))
+            using var ctx = CreateContext();
+            var entity = ctx.OrderHistory.Find(id);
+            if (entity != null)
             {
-                db.Delete<OrderHistory>(id);
+                ctx.OrderHistory.Remove(entity);
+                ctx.SaveChanges();
             }
         }
 
         public List<OrderHistory> GetRecentOrders()
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<OrderHistory>()
-                         .OrderByDescending(o => o.CreatedDate)
-                         .Take(50)
-                         .ToList();
-            }
+            using var ctx = CreateContext();
+            return ctx.OrderHistory
+                      .OrderByDescending(o => o.CreatedDate)
+                      .Take(50)
+                      .ToList();
         }
+
+        // =================== МАТЕРИАЛЫ ===================
 
         public List<MaterialType> GetMaterials()
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<MaterialType>().ToList();
-            }
+            using var ctx = CreateContext();
+            return ctx.MaterialTypes.ToList();
         }
 
         public void UpdateAllMaterials(List<MaterialType> list)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.DeleteAll<MaterialType>();
-                db.InsertAll(list);
-            }
+            using var ctx = CreateContext();
+            ctx.MaterialTypes.ExecuteDelete();
+            ctx.MaterialTypes.AddRange(list);
+            ctx.SaveChanges();
         }
 
-        public List<MaterialProfile> GetAllLaserProfiles()
-        {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<MaterialProfile>().OrderBy(p => p.Thickness).ToList();
-            }
-        }
+        // =================== СОРТАМЕНТ ПРОКАТА ===================
 
-        public void UpdateAllLaserProfiles(List<MaterialProfile> list)
-        {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.DeleteAll<MaterialProfile>();
-                db.InsertAll(list);
-            }
-        }
-
-        public List<BendingProfile> GetAllBendingProfiles()
-        {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<BendingProfile>().OrderBy(p => p.Thickness).ToList();
-            }
-        }
-
-        public void UpdateAllBendingProfiles(List<BendingProfile> list)
-        {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.DeleteAll<BendingProfile>();
-                db.InsertAll(list);
-            }
-        }
-
-        // ✅ НОВЫЕ МЕТОДЫ для СВАРКИ
-        public List<WeldingProfile> GetAllWeldingProfiles()
-        {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<WeldingProfile>().OrderBy(p => p.FilletSize).ToList();
-            }
-        }
-
-        public void UpdateAllWeldingProfiles(List<WeldingProfile> list)
-        {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.DeleteAll<WeldingProfile>();
-                db.InsertAll(list);
-            }
-        }
-
-        // ✅ НОВЫЕ МЕТОДЫ для СОРТАМЕНТА ПРОКАТА
         public List<RolledProfile> GetAllRolledProfiles()
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<RolledProfile>()
-                         .OrderBy(p => p.Kind)
-                         .ThenBy(p => p.WeightPerMeterKg)
-                         .ToList();
-            }
+            using var ctx = CreateContext();
+            return ctx.RolledProfiles
+                      .OrderBy(p => p.Kind)
+                      .ThenBy(p => p.WeightPerMeterKg)
+                      .ToList();
         }
 
         public List<RolledProfile> GetRolledProfilesByKind(ProfileKind kind)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<RolledProfile>()
-                         .Where(p => p.Kind == kind)
-                         .OrderBy(p => p.WeightPerMeterKg)
-                         .ToList();
-            }
+            using var ctx = CreateContext();
+            return ctx.RolledProfiles
+                      .Where(p => p.Kind == kind)
+                      .OrderBy(p => p.WeightPerMeterKg)
+                      .ToList();
         }
 
         public RolledProfile? GetRolledProfileById(int id)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Find<RolledProfile>(id);
-            }
+            using var ctx = CreateContext();
+            return ctx.RolledProfiles.Find(id);
         }
 
         public int AddRolledProfile(RolledProfile profile)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.Insert(profile);
-                return profile.Id;
-            }
+            using var ctx = CreateContext();
+            ctx.RolledProfiles.Add(profile);
+            ctx.SaveChanges();
+            return profile.Id;
         }
 
         public void UpdateRolledProfile(RolledProfile profile)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.Update(profile);
-            }
+            using var ctx = CreateContext();
+            ctx.RolledProfiles.Update(profile);
+            ctx.SaveChanges();
         }
 
         public void DeleteRolledProfile(int id)
         {
-            using (var db = new SQLiteConnection(_dbPath))
+            using var ctx = CreateContext();
+            var entity = ctx.RolledProfiles.Find(id);
+            if (entity != null)
             {
-                db.Delete<RolledProfile>(id);
+                ctx.RolledProfiles.Remove(entity);
+                ctx.SaveChanges();
             }
         }
 
         public void UpdateAllRolledProfiles(List<RolledProfile> list)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.DeleteAll<RolledProfile>();
-                db.InsertAll(list);
-            }
+            using var ctx = CreateContext();
+            ctx.RolledProfiles.ExecuteDelete();
+            ctx.RolledProfiles.AddRange(list);
+            ctx.SaveChanges();
         }
 
-        // ✅ СТАНКИ РЕЗКИ (Спринт 2.2a)
+        // =================== СТАНКИ РЕЗКИ ===================
+
         public List<CuttingMachine> GetAllCuttingMachines()
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<CuttingMachine>()
-                         .OrderBy(m => m.Kind)
-                         .ThenBy(m => m.Name)
-                         .ToList();
-            }
+            using var ctx = CreateContext();
+            return ctx.CuttingMachines
+                      .OrderBy(m => m.Kind)
+                      .ThenBy(m => m.Name)
+                      .ToList();
         }
 
         public List<CuttingMachine> GetCuttingMachinesByKind(CuttingMachineKind kind)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Table<CuttingMachine>()
-                         .Where(m => m.Kind == kind)
-                         .OrderBy(m => m.Name)
-                         .ToList();
-            }
+            using var ctx = CreateContext();
+            return ctx.CuttingMachines
+                      .Where(m => m.Kind == kind)
+                      .OrderBy(m => m.Name)
+                      .ToList();
         }
 
         public CuttingMachine? GetCuttingMachineById(int id)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                return db.Find<CuttingMachine>(id);
-            }
+            using var ctx = CreateContext();
+            return ctx.CuttingMachines.Find(id);
         }
 
         public int AddCuttingMachine(CuttingMachine machine)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.Insert(machine);
-                return machine.Id;
-            }
+            using var ctx = CreateContext();
+            ctx.CuttingMachines.Add(machine);
+            ctx.SaveChanges();
+            return machine.Id;
         }
 
         public void UpdateCuttingMachine(CuttingMachine machine)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.Update(machine);
-            }
+            using var ctx = CreateContext();
+            ctx.CuttingMachines.Update(machine);
+            ctx.SaveChanges();
         }
 
         public void DeleteCuttingMachine(int id)
         {
-            using (var db = new SQLiteConnection(_dbPath))
+            using var ctx = CreateContext();
+            var entity = ctx.CuttingMachines.Find(id);
+            if (entity != null)
             {
-                db.Delete<CuttingMachine>(id);
+                ctx.CuttingMachines.Remove(entity);
+                ctx.SaveChanges();
             }
         }
 
         public void UpdateAllCuttingMachines(List<CuttingMachine> list)
         {
-            using (var db = new SQLiteConnection(_dbPath))
-            {
-                db.DeleteAll<CuttingMachine>();
-                db.InsertAll(list);
-            }
+            using var ctx = CreateContext();
+            ctx.CuttingMachines.ExecuteDelete();
+            ctx.CuttingMachines.AddRange(list);
+            ctx.SaveChanges();
         }
     }
 }
