@@ -1,5 +1,4 @@
 using System;
-using SQLite;
 
 namespace MetalCalcWPF.Models
 {
@@ -9,7 +8,8 @@ namespace MetalCalcWPF.Models
     /// </summary>
     public class SchemaVersion
     {
-        [PrimaryKey]
+        // PK без автоинкремента — версии задаются вручную в миграциях.
+        // Конфигурация в AppDbContext: e.HasKey(x => x.Version) + ValueGeneratedNever().
         public int Version { get; set; }
 
         public DateTime AppliedAt { get; set; }

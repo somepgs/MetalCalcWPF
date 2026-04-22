@@ -1,5 +1,3 @@
-using SQLite;
-
 namespace MetalCalcWPF.Models
 {
     /// <summary>
@@ -8,7 +6,6 @@ namespace MetalCalcWPF.Models
     /// </summary>
     public class RolledProfile
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         /// <summary>Тип сортамента (форма).</summary>
@@ -82,11 +79,11 @@ namespace MetalCalcWPF.Models
             else CompatibleMachines &= ~(int)f;
         }
 
-        [Ignore] public bool CanLaser        { get => HasFlag(CuttingMachines.Laser);        set => SetFlag(CuttingMachines.Laser, value); }
-        [Ignore] public bool CanBandSaw      { get => HasFlag(CuttingMachines.BandSaw);      set => SetFlag(CuttingMachines.BandSaw, value); }
-        [Ignore] public bool CanPressShears  { get => HasFlag(CuttingMachines.PressShears);  set => SetFlag(CuttingMachines.PressShears, value); }
-        [Ignore] public bool CanGuillotine   { get => HasFlag(CuttingMachines.Guillotine);   set => SetFlag(CuttingMachines.Guillotine, value); }
-        [Ignore] public bool CanAngleGrinder { get => HasFlag(CuttingMachines.AngleGrinder); set => SetFlag(CuttingMachines.AngleGrinder, value); }
+        public bool CanLaser        { get => HasFlag(CuttingMachines.Laser);        set => SetFlag(CuttingMachines.Laser, value); }
+        public bool CanBandSaw      { get => HasFlag(CuttingMachines.BandSaw);      set => SetFlag(CuttingMachines.BandSaw, value); }
+        public bool CanPressShears  { get => HasFlag(CuttingMachines.PressShears);  set => SetFlag(CuttingMachines.PressShears, value); }
+        public bool CanGuillotine   { get => HasFlag(CuttingMachines.Guillotine);   set => SetFlag(CuttingMachines.Guillotine, value); }
+        public bool CanAngleGrinder { get => HasFlag(CuttingMachines.AngleGrinder); set => SetFlag(CuttingMachines.AngleGrinder, value); }
 
         public override string ToString() =>
             string.IsNullOrWhiteSpace(GostDesignation) ? $"{Kind} {SizeCode}" : GostDesignation;

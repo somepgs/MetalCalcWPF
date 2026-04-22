@@ -1,10 +1,7 @@
-﻿using SQLite;
-
-namespace MetalCalcWPF.Models
+﻿namespace MetalCalcWPF.Models
 {
     public class BendingProfile
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         public double Thickness { get; set; }

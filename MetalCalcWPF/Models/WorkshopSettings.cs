@@ -1,10 +1,8 @@
-using SQLite;
-
 namespace MetalCalcWPF.Models
 {
     public class WorkshopSettings
     {
-        [PrimaryKey, AutoIncrement]
+        // EF Core: int Id — PK + AUTOINCREMENT по умолчанию (см. AppDbContext).
         public int Id { get; set; }
 
         // --- 1. ОБЩИЕ и ЛАЗЕР ---
