@@ -96,7 +96,8 @@ namespace MetalCalcWPF.Services
             int piercesCount,
             bool useBending, int bendsCount, double bendLengthMm,
             bool useWelding, double weldLengthCm,
-            double measuredWeightKg = 0)
+            double measuredWeightKg = 0,
+            int? cuttingMachineId = null)
         {
             var request = new CalculationRequest
             {
@@ -113,6 +114,7 @@ namespace MetalCalcWPF.Services
                 UseWelding = useWelding,
                 WeldLengthCm = weldLengthCm,
                 MeasuredWeightKg = measuredWeightKg,
+                CuttingMachineId = cuttingMachineId,
             };
 
             var settings = _db.GetSettings();

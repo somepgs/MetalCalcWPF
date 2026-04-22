@@ -47,6 +47,9 @@ namespace MetalCalcWPF.ViewModels
         private string _rolledInfoText = string.Empty;
         private string _rolledSearchText = string.Empty;
 
+        // ✅ Спринт 2.2b: выбор конкретного лазерного станка
+        private CuttingMachine? _selectedLaserMachine;
+
         public MainViewModel(
             IDatabaseService databaseService,
             IWindowService windowService,
@@ -64,6 +67,12 @@ namespace MetalCalcWPF.ViewModels
             History = new ObservableCollection<OrderHistory>(_databaseService.GetRecentOrders());
             Breakdowns = new ObservableCollection<CalculationBreakdown>();
             SelectedMaterial = Materials.FirstOrDefault();
+
+            // ✅ Только активные лазеры — собираем для дропдауна вкладки «Лазер»
+            LaserMachines = new ObservableCollection<CuttingMachine>(
+                _databaseService.GetCuttingMachinesByKind(CuttingMachineKind.Laser)
+                                .Where(m => m.IsActive));
+            SelectedLaserMachine = LaserMachines.FirstOrDefault();
 
             // ✅ Загружаем только активные профили проката
             RolledProfiles = new ObservableCollection<RolledProfile>(
@@ -150,6 +159,29 @@ namespace MetalCalcWPF.ViewModels
         /// Рисуется в UI списком Expander'ов «🔍 Детализация расчёта».
         /// </summary>
         public ObservableCollection<CalculationBreakdown> Breakdowns { get; }
+
+        /// <summary>
+        /// Активные лазерные станки из справочника <see cref="CuttingMachine"/>.
+        /// Если список пуст — dropdown в UI скрыт, калькулятор работает
+        /// по чистой Excel-формуле (обратная совместимость).
+        /// </summary>
+        public ObservableCollection<CuttingMachine> LaserMachines { get; }
+
+        /// <summary>
+        /// Выбранный лазерный станок — его Setup / MinCharge / PricePerMeterOverride
+        /// подмешиваются в расчёт лазера (Спринт 2.2b).
+        /// </summary>
+        public CuttingMachine? SelectedLaserMachine
+        {
+            get => _selectedLaserMachine;
+            set => SetProperty(ref _selectedLaserMachine, value);
+        }
+
+        /// <summary>
+        /// Видимость дропдауна станка во вкладке «Лазер» — скрываем, если в БД
+        /// нет ни одного активного лазера (свежая установка или легаси без справочника).
+        /// </summary>
+        public bool HasLaserMachines => LaserMachines.Count > 0;
 
         /// <summary>
         /// True, если есть что показать в блоке «🔍 Детализация расчёта» —
@@ -424,13 +456,14 @@ namespace MetalCalcWPF.ViewModels
                     }
                 }
 
-                // ✅ ОБНОВЛЕННЫЙ ВЫЗОВ с количеством пробивок
+                // ✅ ОБНОВЛЕННЫЙ ВЫЗОВ с количеством пробивок и выбранным станком (2.2b)
                 var result = _calculator.CalculateOrder(
                     widthMm, heightMm, thicknessMm, quantity, SelectedMaterial,
-                    laserLen, piercesCount, // ✅ Передаем количество пробивок
+                    laserLen, piercesCount,
                     UseBending, bendsCount, bendLenMm,
                     UseWelding, weldCm,
-                    weightKg
+                    weightKg,
+                    cuttingMachineId: SelectedLaserMachine?.Id
                 );
 
                 ResultText = $"Итого: {Math.Round(result.TotalPrice):N0} ₸";

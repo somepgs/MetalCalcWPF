@@ -53,8 +53,10 @@ namespace MetalCalcWPF.Tests
             public void UpdateAllRolledProfiles(List<RolledProfile> list) { }
             public List<CuttingMachine> CuttingMachines { get; set; } = new List<CuttingMachine>();
             public List<CuttingMachine> GetAllCuttingMachines() => CuttingMachines;
-            public List<CuttingMachine> GetCuttingMachinesByKind(CuttingMachineKind kind) => new List<CuttingMachine>();
-            public CuttingMachine? GetCuttingMachineById(int id) => null;
+            public List<CuttingMachine> GetCuttingMachinesByKind(CuttingMachineKind kind)
+                => CuttingMachines.Where(m => m.Kind == kind).ToList();
+            public CuttingMachine? GetCuttingMachineById(int id)
+                => CuttingMachines.FirstOrDefault(m => m.Id == id);
             public int AddCuttingMachine(CuttingMachine machine) => 0;
             public void UpdateCuttingMachine(CuttingMachine machine) { }
             public void DeleteCuttingMachine(int id) { }
@@ -135,7 +137,9 @@ namespace MetalCalcWPF.Tests
         }
 
         /// <summary>
-        /// Для партии &gt; 1 шт должна появиться строка «Итого за N шт», умноженная на количество.
+        /// Для партии &gt; 1 шт должна появиться строка «Итого за N шт», умноженная на количество,
+        /// а итоговая «Итого по лазеру» пометиться как IsTotal (со Спринта 2.2b — единая строка
+        /// итога, куда накидываются Setup и MinCharge от станка).
         /// </summary>
         [TestMethod]
         public void LaserBreakdown_MultipleQuantity_ShowsBatchTotal()
@@ -157,7 +161,10 @@ namespace MetalCalcWPF.Tests
             var laser = r.Breakdowns.First(b => b.Section.Contains("Лазер"));
             var batch = laser.Lines.First(l => l.Label == "Итого за 5 шт");
             Assert.AreEqual(1000m, batch.Value, "1 шт = 200 тг; 5 шт = 1000 тг");
-            Assert.IsTrue(batch.IsTotal, "Именно строка по партии должна быть помечена как итоговая");
+
+            var total = laser.Lines.First(l => l.IsTotal);
+            Assert.AreEqual("Итого по лазеру", total.Label, "Итоговая строка должна называться «Итого по лазеру»");
+            Assert.AreEqual(1000m, total.Value);
         }
 
         /// <summary>
@@ -183,6 +190,213 @@ namespace MetalCalcWPF.Tests
             var total = weld!.Lines.First(l => l.IsTotal);
             // 20 см × 50 тг/см × 2 шт = 2000 тг
             Assert.AreEqual(2000m, total.Value);
+        }
+
+        /// <summary>
+        /// Спринт 2.2b: если у выбранного станка задан PricePerMeterOverride,
+        /// он подменяет «цену клиенту за метр», а формула минута/скорость × K
+        /// в детализации показывается отдельной строкой «Цена по формуле за метр».
+        /// </summary>
+        [TestMethod]
+        public void Laser_Machine_PricePerMeterOverride_ReplacesClientPrice()
+        {
+            var db = new FakeDb();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 10, GasType = "Air",
+                CuttingSpeed = 10.0, PiercePrice = 0, MarkupCoefficient = 40,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;  // по формуле клиент/м = 50/10*40 = 200
+            db.Settings.MaterialMarkupPercent = 0;
+            db.CuttingMachines.Add(new CuttingMachine
+            {
+                Id = 1, Name = "Лазер договорной", Kind = CuttingMachineKind.Laser,
+                IsActive = true,
+                PricePerMeterOverride = 500m,  // клиент всегда платит 500 тг/м независимо от формулы
+            });
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            var r = svc.CalculateOrder(100, 100, 10, 1, mat, 1.0, 0, false, 0, 0, false, 0,
+                                       cuttingMachineId: 1);
+
+            // 500 тг/м × 1 м = 500 тг, не 200 тг по формуле.
+            Assert.AreEqual(500m, Math.Round(r.LaserCost, 2));
+
+            var laser = r.Breakdowns.First(b => b.Section.Contains("Лазер"));
+            Assert.IsTrue(laser.Lines.Any(l => l.Label == "Цена по формуле за метр"),
+                "Формульная цена должна остаться видна для сверки");
+            Assert.IsTrue(laser.Lines.Any(l => l.Label == "Цена по станку (override)"),
+                "Override должен быть подписан отдельной строкой");
+        }
+
+        /// <summary>
+        /// SetupCostPerJob у станка прибавляется к итогу ОДИН раз за партию,
+        /// не умножается на количество.
+        /// </summary>
+        [TestMethod]
+        public void Laser_Machine_SetupCost_AddsOnceNotPerPart()
+        {
+            var db = new FakeDb();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 10, GasType = "Air",
+                CuttingSpeed = 10.0, PiercePrice = 0, MarkupCoefficient = 40,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;  // клиент/м = 200 тг
+            db.Settings.MaterialMarkupPercent = 0;
+            db.CuttingMachines.Add(new CuttingMachine
+            {
+                Id = 1, Name = "Лазер", Kind = CuttingMachineKind.Laser,
+                IsActive = true,
+                SetupCostPerJob = 1500m,
+            });
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            // 5 шт × 1 м × 200 тг/м = 1000 тг резки + 1500 тг setup (разово) = 2500 тг
+            var r = svc.CalculateOrder(100, 100, 10, 5, mat, 1.0, 0, false, 0, 0, false, 0,
+                                       cuttingMachineId: 1);
+
+            Assert.AreEqual(2500m, Math.Round(r.LaserCost, 2),
+                "Setup прибавляется один раз ко всей партии, не 5 раз");
+        }
+
+        /// <summary>
+        /// MinChargePerJob работает как пол: если subtotal меньше, итог
+        /// подтягивается вверх до минимума.
+        /// </summary>
+        [TestMethod]
+        public void Laser_Machine_MinCharge_ActsAsFloor()
+        {
+            var db = new FakeDb();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 1, GasType = "Air",
+                CuttingSpeed = 25.0, PiercePrice = 0, MarkupCoefficient = 100,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;  // клиент/м = 50/25*100 = 200 тг
+            db.Settings.MaterialMarkupPercent = 0;
+            db.CuttingMachines.Add(new CuttingMachine
+            {
+                Id = 1, Name = "Лазер", Kind = CuttingMachineKind.Laser,
+                IsActive = true,
+                MinChargePerJob = 5000m,
+            });
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            // 1 м × 200 тг/м = 200 тг, пол 5000 → итог 5000
+            var r = svc.CalculateOrder(100, 100, 1, 1, mat, 1.0, 0, false, 0, 0, false, 0,
+                                       cuttingMachineId: 1);
+
+            Assert.AreEqual(5000m, Math.Round(r.LaserCost, 2));
+
+            var laser = r.Breakdowns.First(b => b.Section.Contains("Лазер"));
+            Assert.IsTrue(laser.Lines.Any(l => l.Label == "Минимум за заказ"),
+                "Строка «Минимум за заказ» должна появиться, когда пол сработал");
+        }
+
+        /// <summary>
+        /// Когда заказ УЖЕ больше MinCharge, пол не применяется — платим ровно по расчёту.
+        /// </summary>
+        [TestMethod]
+        public void Laser_Machine_MinCharge_NotAppliedWhenSubtotalAbove()
+        {
+            var db = new FakeDb();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 1, GasType = "Air",
+                CuttingSpeed = 25.0, PiercePrice = 0, MarkupCoefficient = 100,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;  // клиент/м = 200 тг
+            db.Settings.MaterialMarkupPercent = 0;
+            db.CuttingMachines.Add(new CuttingMachine
+            {
+                Id = 1, Name = "Лазер", Kind = CuttingMachineKind.Laser,
+                IsActive = true,
+                MinChargePerJob = 500m,
+            });
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            // 10 шт × 1 м × 200 тг/м = 2000 тг. Пол 500 → остаётся 2000.
+            var r = svc.CalculateOrder(100, 100, 1, 10, mat, 1.0, 0, false, 0, 0, false, 0,
+                                       cuttingMachineId: 1);
+
+            Assert.AreEqual(2000m, Math.Round(r.LaserCost, 2));
+            var laser = r.Breakdowns.First(b => b.Section.Contains("Лазер"));
+            Assert.IsFalse(laser.Lines.Any(l => l.Label == "Минимум за заказ"),
+                "Когда MinCharge не применён, эту строку показывать не должны");
+        }
+
+        /// <summary>
+        /// Если станков в справочнике нет — калькулятор работает по чистой Excel-формуле
+        /// (регрессия против сценария до 2.2b и для тех, кто ещё не заполнил таблицу станков).
+        /// </summary>
+        [TestMethod]
+        public void Laser_NoMachinesInDb_WorksWithPureExcelFormula()
+        {
+            var db = new FakeDb();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 16, GasType = "Oxygen",
+                CuttingSpeed = 1.4, PiercePrice = 0, MarkupCoefficient = 40,
+            });
+            db.Settings.LaserOxygenMinutePrice = 85m;
+            db.Settings.MaterialMarkupPercent = 0;
+            // CuttingMachines пуст — это легаси-сценарий.
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            var r = svc.CalculateOrder(100, 100, 16, 1, mat, 1.0, 0, false, 0, 0, false, 0);
+
+            Assert.AreEqual(2428.57m, Math.Round(r.LaserCost, 2),
+                "Без станка должен работать чистый Excel-паритет");
+        }
+
+        /// <summary>
+        /// Неактивные станки игнорируются — если явно переданный ID указывает на IsActive=false,
+        /// калькулятор откатится на первый активный.
+        /// </summary>
+        [TestMethod]
+        public void Laser_InactiveMachineIsSkipped()
+        {
+            var db = new FakeDb();
+            db.Profiles.Add(new MaterialProfile
+            {
+                Thickness = 10, GasType = "Air",
+                CuttingSpeed = 10.0, PiercePrice = 0, MarkupCoefficient = 40,
+            });
+            db.Settings.LaserAirMinutePrice = 50m;
+            db.Settings.MaterialMarkupPercent = 0;
+            db.CuttingMachines.Add(new CuttingMachine
+            {
+                Id = 1, Name = "Старый", Kind = CuttingMachineKind.Laser,
+                IsActive = false,
+                PricePerMeterOverride = 999m,  // не должен подмешаться
+            });
+            db.CuttingMachines.Add(new CuttingMachine
+            {
+                Id = 2, Name = "Основной", Kind = CuttingMachineKind.Laser,
+                IsActive = true,
+                SetupCostPerJob = 100m,
+            });
+
+            var svc = new CalculationService(db);
+            var mat = new MaterialType { Name = "Ст3", Density = 7.85, BasePricePerKg = 0 };
+
+            // Указываем ID неактивного — должен упасть на первый активный = id=2
+            var r = svc.CalculateOrder(100, 100, 10, 1, mat, 1.0, 0, false, 0, 0, false, 0,
+                                       cuttingMachineId: 1);
+
+            // 1 шт × 200 тг + 100 setup от активного = 300, а не 999
+            Assert.AreEqual(300m, Math.Round(r.LaserCost, 2));
         }
 
         /// <summary>
