@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using SQLite;
 using MetalCalcWPF.Infrastructure.Migrations;
 using MetalCalcWPF.Infrastructure.Persistence;
 using MetalCalcWPF.Models;
@@ -64,20 +63,20 @@ namespace MetalCalcWPF
             }
 
             // 2) Прокатываем миграции, затем заполняем справочники (если пусто).
-            //    Пока MigrationRunner работает на SQLiteConnection — миграция этого
-            //    слоя на EF Core запланирована следующим шагом Спринта 2.3-0.
+            //    С Фазы 3 всё (миграции + seed) идёт через AppDbContext —
+            //    sqlite-net-pcl больше не используется.
             _log.Info("DatabaseService: открываем БД {0}", dbPath);
-            using (var db = new SQLiteConnection(_dbPath))
+            using (var ctx = CreateContext())
             {
                 try
                 {
-                    var applied = MigrationRunner.Run(db);
+                    var applied = MigrationRunner.Run(ctx);
                     if (applied.Count > 0)
                         _log.Info("Миграции применены: {0}", string.Join(", ", applied.Select(v => "v" + v)));
                     else
                         _log.Info("Миграции: все уже применены, изменений нет.");
 
-                    SeedIfEmpty(db);
+                    SeedIfEmpty(ctx);
                 }
                 catch (System.Exception ex)
                 {
@@ -111,11 +110,11 @@ namespace MetalCalcWPF
         /// Заполняет справочные таблицы стартовыми данными, если они пусты.
         /// Безопасно вызывать многократно — на втором запуске не делает ничего.
         /// </summary>
-        private static void SeedIfEmpty(SQLiteConnection db)
+        private static void SeedIfEmpty(AppDbContext ctx)
         {
             {
                 // --- АВТО-ЗАПОЛНЕНИЕ ЛАЗЕРА ---
-                if (db.Table<MaterialProfile>().Count() == 0)
+                if (!ctx.MaterialProfiles.Any())
                 {
                     // ✅ Значения скорости/пробивки/коэффициента — из рабочего Excel-исходника
                     // («Лазер bodor», строки 2–22). Считаются по формуле
@@ -148,11 +147,12 @@ namespace MetalCalcWPF
                         new MaterialProfile { Thickness = 36.0, GasType = "Oxygen", CuttingSpeed = 0.3, PiercePrice = 200, MarkupCoefficient = 35 },
                         new MaterialProfile { Thickness = 40.0, GasType = "Oxygen", CuttingSpeed = 0.2, PiercePrice = 210, MarkupCoefficient = 35 },
                     };
-                    db.InsertAll(list);
+                    ctx.MaterialProfiles.AddRange(list);
+                    ctx.SaveChanges();
                 }
 
                 // --- АВТО-ЗАПОЛНЕНИЕ ГИБКИ ---
-                if (db.Table<BendingProfile>().Count() == 0)
+                if (!ctx.BendingProfiles.Any())
                 {
                     var bendList = new System.Collections.Generic.List<BendingProfile>
                     {
@@ -171,11 +171,12 @@ namespace MetalCalcWPF
                         new BendingProfile { Thickness = 16.0, V_Die = 160,MinFlange = 110,PriceLen1500 = 2000, PriceLen3000 = 5000, PriceLen6000 = 15000, SetupPrice = 15000 },
                         new BendingProfile { Thickness = 20.0, V_Die = 250,MinFlange = 150,PriceLen1500 = 3500, PriceLen3000 = 8000, PriceLen6000 = 25000, SetupPrice = 20000 },
                     };
-                    db.InsertAll(bendList);
+                    ctx.BendingProfiles.AddRange(bendList);
+                    ctx.SaveChanges();
                 }
 
                 // --- ✅ АВТО-ЗАПОЛНЕНИЕ СВАРКИ (Данные из Excel) ---
-                if (db.Table<WeldingProfile>().Count() == 0)
+                if (!ctx.WeldingProfiles.Any())
                 {
                     var weldList = new System.Collections.Generic.List<WeldingProfile>
                     {
@@ -198,11 +199,12 @@ namespace MetalCalcWPF
                         // Катет 20мм
                         new WeldingProfile { FilletSize = 20.0, WeldingSpeed = 3, WeightPerCm = 30.0, CostPerCm = 107.69m, PricePerCm = 323.06m, MarkupCoefficient = 3.0 },
                     };
-                    db.InsertAll(weldList);
+                    ctx.WeldingProfiles.AddRange(weldList);
+                    ctx.SaveChanges();
                 }
 
                 // --- АВТО-ЗАПОЛНЕНИЕ МАТЕРИАЛОВ ---
-                if (db.Table<MaterialType>().Count() == 0)
+                if (!ctx.MaterialTypes.Any())
                 {
                     var materials = new System.Collections.Generic.List<MaterialType>
                     {
@@ -210,13 +212,15 @@ namespace MetalCalcWPF
                         new MaterialType { Name = "Оцинковка", Density = 7.85, BasePricePerKg = 450m },
                         new MaterialType { Name = "Нержавейка (AISI 304)", Density = 7.9, BasePricePerKg = 2500m }
                     };
-                    db.InsertAll(materials);
+                    ctx.MaterialTypes.AddRange(materials);
+                    ctx.SaveChanges();
                 }
 
                 // --- ✅ АВТО-ЗАПОЛНЕНИЕ СОРТАМЕНТА ПРОКАТА ---
-                if (db.Table<RolledProfile>().Count() == 0)
+                if (!ctx.RolledProfiles.Any())
                 {
-                    db.InsertAll(BuildRolledProfileSeed());
+                    ctx.RolledProfiles.AddRange(BuildRolledProfileSeed());
+                    ctx.SaveChanges();
                 }
             }
         }
