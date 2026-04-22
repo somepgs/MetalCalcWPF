@@ -36,12 +36,20 @@
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,10,0">
+            <!--
+                Структура левой панели:
+                Row 0 — верхние системные кнопки («🗄 База данных» / «⚙ Настройки»), всегда видимы.
+                Row 1 — ScrollViewer со всем редактируемым содержимым (поля ввода, вкладки, кнопка расчёта,
+                        итог, «🔍 Детализация расчёта»).
+
+                Скролл появляется автоматически, когда контент не помещается
+                (VerticalScrollBarVisibility="Auto"). Горизонтальный — на случай очень узкого окна.
+                Это решает проблему: при раскрытой детализации нижняя часть панели уезжала за край окна.
+            -->
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
@@ -49,7 +57,18 @@
                     <Button Content="⚙ Настройки" Command="{Binding OpenSettingsCommand}" Padding="5,2"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              Padding="0,0,5,0">
+                <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,10">
                     <TextBlock Text="Клиент / Название заказа:" FontWeight="Bold"/>
                     <TextBox Height="25" Margin="0,5,0,5" Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"/>
 
@@ -208,7 +227,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <TabControl Grid.Row="2" Margin="0,0,0,10">
+                <TabControl Grid.Row="1" Margin="0,0,0,10">
                     <TabItem Header="🔥 Лазер">
                         <StackPanel Margin="10">
                             <!-- ✅ Спринт 2.2b: выбор конкретного лазерного станка.
@@ -300,7 +319,7 @@
                     </TabItem>
                 </TabControl>
 
-                <StackPanel Grid.Row="3">
+                <StackPanel Grid.Row="2">
                     <Button Content="Рассчитать всё" Height="45" Command="{Binding CalculateCommand}" Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold"/>
                     <TextBlock Text="{Binding ResultText}" FontSize="26" FontWeight="Bold" Margin="0,15,0,0" Foreground="#2E7D32" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding ResultDetails}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,5,0,0"/>
@@ -374,6 +393,8 @@
 
                     <TextBlock Text="{Binding ValidationMessage}" FontSize="12" Foreground="DarkRed" TextWrapping="Wrap" Margin="0,8,0,0" HorizontalAlignment="Center"/>
                 </StackPanel>
+                </Grid>
+                </ScrollViewer>
             </Grid>
         </Border>
 
