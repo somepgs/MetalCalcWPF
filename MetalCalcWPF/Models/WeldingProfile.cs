@@ -1,5 +1,3 @@
-using SQLite;
-
 namespace MetalCalcWPF.Models
 {
     /// <summary>
@@ -8,7 +6,6 @@ namespace MetalCalcWPF.Models
     /// </summary>
     public class WeldingProfile
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         /// <summary>

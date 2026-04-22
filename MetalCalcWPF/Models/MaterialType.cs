@@ -1,10 +1,7 @@
-﻿using SQLite;
-
-namespace MetalCalcWPF.Models
+﻿namespace MetalCalcWPF.Models
 {
     public class MaterialType
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         public string Name { get; set; }      // "Черная сталь (Ст3)", "Нержавейка"

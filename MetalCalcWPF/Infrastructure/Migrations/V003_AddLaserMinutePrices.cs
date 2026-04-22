@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
-using SQLite;
+using Microsoft.EntityFrameworkCore;
+using MetalCalcWPF.Infrastructure.Persistence;
 using MetalCalcWPF.Models;
 
 namespace MetalCalcWPF.Infrastructure.Migrations
@@ -18,7 +19,7 @@ namespace MetalCalcWPF.Infrastructure.Migrations
     ///
     /// Стратегия:
     /// 1. На СВЕЖЕЙ БД: v1 создаёт таблицу WorkshopSettings с новыми колонками
-    ///    (они уже есть в модели). Эта миграция тогда не делает ничего —
+    ///    (они уже есть в DDL V001). Эта миграция тогда не делает ничего —
     ///    HasColumn вернёт true и ALTER TABLE не выполнится.
     /// 2. На СУЩЕСТВУЮЩЕЙ БД: v1 = CREATE TABLE IF NOT EXISTS — таблица не пересоздаётся,
     ///    новых колонок нет. Эта миграция добавит их через ALTER TABLE со значениями
@@ -33,43 +34,37 @@ namespace MetalCalcWPF.Infrastructure.Migrations
         public string Description =>
             "Добавлены цены минуты работы лазера (воздух/кислород) для Excel-паритета.";
 
-        public void Up(SQLiteConnection db)
+        public void Up(AppDbContext ctx)
         {
-            // Имя таблицы, как его выдаёт sqlite-net (по имени класса).
             const string table = "WorkshopSettings";
 
-            if (!HasColumn(db, table, "LaserAirMinutePrice"))
+            if (!HasColumn(ctx, table, "LaserAirMinutePrice"))
             {
-                db.Execute(
+                ctx.Database.ExecuteSqlRaw(
                     "ALTER TABLE \"" + table + "\" ADD COLUMN \"LaserAirMinutePrice\" decimal NOT NULL DEFAULT 65");
             }
 
-            if (!HasColumn(db, table, "LaserOxygenMinutePrice"))
+            if (!HasColumn(ctx, table, "LaserOxygenMinutePrice"))
             {
-                db.Execute(
+                ctx.Database.ExecuteSqlRaw(
                     "ALTER TABLE \"" + table + "\" ADD COLUMN \"LaserOxygenMinutePrice\" decimal NOT NULL DEFAULT 85");
             }
         }
 
         /// <summary>
-        /// Проверяет через PRAGMA table_info, что колонка присутствует в таблице.
+        /// Проверяет через PRAGMA table_info (точнее, её табличную форму
+        /// <c>pragma_table_info</c>), что колонка присутствует в таблице.
         /// Регистр имени колонки в SQLite не важен, сравниваем OrdinalIgnoreCase.
         /// </summary>
-        private static bool HasColumn(SQLiteConnection db, string table, string column)
+        private static bool HasColumn(AppDbContext ctx, string table, string column)
         {
-            var rows = db.Query<TableInfoRow>("PRAGMA table_info(\"" + table + "\")");
-            return rows.Any(r => string.Equals(r.name, column, StringComparison.OrdinalIgnoreCase));
-        }
+            // SQLite не поддерживает параметризацию DDL/PRAGMA, поэтому имя таблицы
+            // подставляется конкатенацией. Это безопасно: имена зашиты в коде миграций.
+            var names = ctx.Database
+                .SqlQueryRaw<string>("SELECT name AS Value FROM pragma_table_info(\"" + table + "\")")
+                .ToList();
 
-        /// <summary>DTO для десериализации строки PRAGMA table_info (нужно только поле name).</summary>
-        private class TableInfoRow
-        {
-            public int cid { get; set; }
-            public string name { get; set; } = string.Empty;
-            public string type { get; set; } = string.Empty;
-            public int notnull { get; set; }
-            public string? dflt_value { get; set; }
-            public int pk { get; set; }
+            return names.Any(n => string.Equals(n, column, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

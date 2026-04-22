@@ -1,10 +1,7 @@
-﻿using SQLite;
-
-namespace MetalCalcWPF.Models
+﻿namespace MetalCalcWPF.Models
 {
     public class MaterialProfile
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         public double Thickness { get; set; }    // Толщина (мм) - Столбец A

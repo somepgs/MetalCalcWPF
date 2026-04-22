@@ -1,11 +1,9 @@
-﻿using SQLite;
-using System;
+﻿using System;
 
 namespace MetalCalcWPF.Models
 {
     public class OrderHistory
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; } // Уникальный номер заказа (1, 2, 3...)
 
         public DateTime CreatedDate { get; set; } // Дата и время расчета

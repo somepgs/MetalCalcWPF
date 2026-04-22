@@ -1,5 +1,3 @@
-using SQLite;
-
 namespace MetalCalcWPF.Models
 {
     /// <summary>
@@ -21,7 +19,6 @@ namespace MetalCalcWPF.Models
     /// </summary>
     public class CuttingMachine
     {
-        [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
         /// <summary>Отображаемое имя ("Лазер Bodor C6", "Ленточная пила DoAll").</summary>
