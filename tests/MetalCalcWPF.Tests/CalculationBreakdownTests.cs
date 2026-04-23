@@ -35,6 +35,7 @@ namespace MetalCalcWPF.Tests
             public void SaveOrder(OrderHistory order) { }
             public void DeleteOrder(int id) { }
             public List<OrderHistory> GetRecentOrders() => new List<OrderHistory>();
+            public List<OrderHistory> GetOrdersByDateRange(DateTime startInclusive, DateTime endExclusive) => new List<OrderHistory>();
             public List<MaterialType> GetMaterials() => new List<MaterialType>();
             public void UpdateAllMaterials(List<MaterialType> list) { }
             public List<MaterialProfile> GetAllLaserProfiles() => Profiles;
