@@ -62,7 +62,7 @@ namespace MetalCalcWPF.Services.Calculation
                 decimal setupCost = (decimal)bendProfile.SetupPrice;
 
                 bendPriceTotal = workCost + setupCost;
-                logFragment = $"+ Bend({request.BendsCount}x) ";
+                logFragment = $"+ Гибка({request.BendsCount}×) ";
 
                 breakdown.Lines.Add(new BreakdownLine(
                     "Цена одного гиба",

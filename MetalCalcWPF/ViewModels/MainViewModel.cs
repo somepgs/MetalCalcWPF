@@ -539,7 +539,13 @@ namespace MetalCalcWPF.ViewModels
                         ClientName = clientName,
                         Description = description,
                         TotalPrice = Math.Round(result.TotalPrice),
-                        OperationType = result.Log
+                        OperationType = result.Log,
+                        // Cost-разбивка по операциям — для отчётности руководству.
+                        // Округляем до тенге, как и TotalPrice (копейки в отчёте бессмысленны).
+                        MaterialCost = Math.Round(result.MaterialCost),
+                        LaserCost = Math.Round(result.LaserCost),
+                        BendingCost = Math.Round(result.BendingCost),
+                        WeldingCost = Math.Round(result.WeldingCost),
                     };
 
                     _databaseService.SaveOrder(newOrder);
