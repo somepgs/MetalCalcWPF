@@ -2,36 +2,63 @@ using System;
 
 namespace MetalCalcWPF.Models
 {
+    /// <summary>
+    /// Запись в истории заказов цеха металлообработки.
+    ///
+    /// <para>Эволюция схемы:</para>
+    /// <list type="bullet">
+    ///   <item>v1 — базовые 6 полей (Id, CreatedDate, ClientName, Description, TotalPrice, OperationType)</item>
+    ///   <item>v4 — добавлена cost-разбивка (MaterialCost / LaserCost / BendingCost / WeldingCost)</item>
+    ///   <item>v6 — добавлены поля заявки (Priority, Quantity, MassKg, заявитель, цех, приёмщик, материал)</item>
+    /// </list>
+    ///
+    /// <para>Поля заявки хранятся как <b>снапшоты строк</b>, а не FK на справочники.
+    /// Причина: история заказов — это «фотография» договорённостей на момент создания
+    /// заявки. Если пользователь удалит человека из <see cref="Person"/> или переименует
+    /// цех в <see cref="Workshop"/>, исторический заказ должен остаться неизменным —
+    /// иначе ломается аудит и отчётность за прошлые периоды.</para>
+    /// </summary>
     public class OrderHistory
     {
-        public int Id { get; set; } // Уникальный номер заказа (1, 2, 3...)
+        public int Id { get; set; }
 
-        public DateTime CreatedDate { get; set; } // Дата и время расчета
+        /// <summary>Дата поступления заявки (в Этапе 3 совпадает с моментом расчёта).</summary>
+        public DateTime CreatedDate { get; set; }
 
-        public string ClientName { get; set; } // Имя клиента или название детали
-        public string Description { get; set; } // Краткое описание (например: "10мм, 20м")
+        public string ClientName { get; set; } // Имя клиента или название детали — поле сохранено для совместимости
+        public string Description { get; set; }
 
-        public decimal TotalPrice { get; set; } // Итоговая сумма
+        public decimal TotalPrice { get; set; }
 
-        // Сводный «тип операции» — короткое имя для UI/группировок ("Металл + Лазер + Сварка").
-        // На данных, сохранённых до v4, может содержать конкатенированный лог калькулятора.
         public string OperationType { get; set; }
 
-        // ====== Cost-разбивка по операциям (миграция v4, Спринт 2.3+) ======
-        // Записывается из CalculationResult.MaterialCost / LaserCost / BendingCost / WeldingCost.
-        // На исторических заказах, сохранённых до v4, эти поля = 0 — это нормально,
-        // отчёт корректно их обработает (в Excel такие строки попадут только в TotalPrice).
-
-        /// <summary>Стоимость металла (тг). 0 для исторических заказов до v4.</summary>
+        // ====== Cost-разбивка (миграция v4) ======
         public decimal MaterialCost { get; set; }
-
-        /// <summary>Стоимость лазерной резки (тг). 0 для исторических заказов до v4.</summary>
         public decimal LaserCost { get; set; }
-
-        /// <summary>Стоимость гибки (тг). 0 для исторических заказов до v4.</summary>
         public decimal BendingCost { get; set; }
-
-        /// <summary>Стоимость сварки (тг). 0 для исторических заказов до v4.</summary>
         public decimal WeldingCost { get; set; }
+
+        // ====== Поля заявки (миграция v6, Этап 3) ======
+
+        /// <summary>Срочность. Default = Normal — для исторических заказов до v6.</summary>
+        public OrderPriority Priority { get; set; } = OrderPriority.Normal;
+
+        /// <summary>Количество деталей в заказе. Раньше было только в форме, теперь сохраняется.</summary>
+        public int Quantity { get; set; }
+
+        /// <summary>Расчётная масса всей партии (кг). Берётся из <c>CalculationResult</c>, удобно для отчёта.</summary>
+        public double MassKg { get; set; }
+
+        /// <summary>ФИО заявителя (снапшот из справочника <see cref="Person"/>).</summary>
+        public string? ApplicantName { get; set; }
+
+        /// <summary>Название цеха/клиента, от которого пришла заявка (снапшот из <see cref="Workshop"/>).</summary>
+        public string? ApplicantWorkshopName { get; set; }
+
+        /// <summary>ФИО принявшего заказ (мастер / бригадир / ПТО).</summary>
+        public string? AcceptorName { get; set; }
+
+        /// <summary>Марка материала (снапшот из <see cref="MaterialType.Name"/>).</summary>
+        public string? MaterialName { get; set; }
     }
 }

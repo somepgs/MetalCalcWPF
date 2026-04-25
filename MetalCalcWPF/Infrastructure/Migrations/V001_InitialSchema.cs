@@ -152,8 +152,9 @@ CREATE TABLE IF NOT EXISTS ""RolledProfile"" (
     ""Notes"" varchar
 )";
 
-        // OrderHistory: 4 cost-колонки добавлены в v4. На свежей БД создаём сразу со всеми
-        // полями — миграция V004 на пустой таблице просто увидит, что колонки уже есть.
+        // OrderHistory: cost-колонки добавлены в v4, поля заявки — в v6.
+        // На свежей БД создаём сразу со всеми колонками — миграции V004/V006
+        // на пустой таблице просто увидят, что колонки уже есть.
         private const string OrderHistoryDdl = @"
 CREATE TABLE IF NOT EXISTS ""OrderHistory"" (
     ""Id"" integer primary key autoincrement not null,
@@ -165,7 +166,14 @@ CREATE TABLE IF NOT EXISTS ""OrderHistory"" (
     ""MaterialCost"" decimal not null default 0,
     ""LaserCost"" decimal not null default 0,
     ""BendingCost"" decimal not null default 0,
-    ""WeldingCost"" decimal not null default 0
+    ""WeldingCost"" decimal not null default 0,
+    ""Priority"" integer not null default 1,
+    ""Quantity"" integer not null default 0,
+    ""MassKg"" float not null default 0,
+    ""ApplicantName"" varchar,
+    ""ApplicantWorkshopName"" varchar,
+    ""AcceptorName"" varchar,
+    ""MaterialName"" varchar
 )";
 
         // Workshop / Person — справочники для workflow заказов (миграция v5).
