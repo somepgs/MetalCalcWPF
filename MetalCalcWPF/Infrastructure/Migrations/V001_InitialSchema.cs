@@ -150,6 +150,8 @@ CREATE TABLE IF NOT EXISTS ""RolledProfile"" (
     ""Notes"" varchar
 )";
 
+        // OrderHistory: 4 cost-колонки добавлены в v4. На свежей БД создаём сразу со всеми
+        // полями — миграция V004 на пустой таблице просто увидит, что колонки уже есть.
         private const string OrderHistoryDdl = @"
 CREATE TABLE IF NOT EXISTS ""OrderHistory"" (
     ""Id"" integer primary key autoincrement not null,
@@ -157,7 +159,11 @@ CREATE TABLE IF NOT EXISTS ""OrderHistory"" (
     ""ClientName"" varchar,
     ""Description"" varchar,
     ""TotalPrice"" decimal not null,
-    ""OperationType"" varchar
+    ""OperationType"" varchar,
+    ""MaterialCost"" decimal not null default 0,
+    ""LaserCost"" decimal not null default 0,
+    ""BendingCost"" decimal not null default 0,
+    ""WeldingCost"" decimal not null default 0
 )";
     }
 }

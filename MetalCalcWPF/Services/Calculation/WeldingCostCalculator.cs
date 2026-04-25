@@ -117,7 +117,7 @@ namespace MetalCalcWPF.Services.Calculation
                     Math.Round(weldTotal, 2), "тг", IsTotal: true));
                 result.Breakdowns.Add(breakdown);
 
-                return $"+ Weld({request.WeldLengthCm}cm, {weldProfile.FilletSize}mm) ";
+                return $"+ Сварка({request.WeldLengthCm}см, {weldProfile.FilletSize}мм) ";
             }
             else
             {
@@ -143,7 +143,7 @@ namespace MetalCalcWPF.Services.Calculation
                     Math.Round(weldTotal, 2), "тг", IsTotal: true));
                 result.Breakdowns.Add(breakdown);
 
-                return $"+ Weld({request.WeldLengthCm}cm, basic) ";
+                return $"+ Сварка({request.WeldLengthCm}см, базовая) ";
             }
         }
     }

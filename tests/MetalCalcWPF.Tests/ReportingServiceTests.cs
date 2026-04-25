@@ -33,6 +33,28 @@ namespace MetalCalcWPF.Tests
                 TotalPrice = price,
             };
 
+        /// <summary>
+        /// Заказ с явной cost-разбивкой по 4 операциям. Проверяет, что
+        /// <see cref="ReportingService.BuildSummary"/> аккумулирует правильные суммы.
+        /// </summary>
+        private static OrderHistory CostOrder(
+            DateTime date,
+            decimal material = 0m, decimal laser = 0m, decimal bending = 0m, decimal welding = 0m,
+            decimal total = 0m)
+            => new OrderHistory
+            {
+                CreatedDate = date,
+                ClientName = "К",
+                Description = "d",
+                OperationType = "Металл + Лазер",
+                MaterialCost = material,
+                LaserCost = laser,
+                BendingCost = bending,
+                WeldingCost = welding,
+                // Если total не задан — считаем как сумму cost-полей.
+                TotalPrice = total > 0 ? total : material + laser + bending + welding,
+            };
+
         [TestMethod]
         public void BuildSummary_EmptyPeriod_ReturnsZeros()
         {
@@ -68,55 +90,63 @@ namespace MetalCalcWPF.Tests
         }
 
         [TestMethod]
-        public void BuildSummary_GroupsByOperation_OrderedByRevenueDescending()
+        public void BuildSummary_AggregatesCostBreakdown_OrderedByRevenueDescending()
         {
+            // С v4 разбивка считается по 4 cost-колонкам (Material/Laser/Bending/Welding),
+            // а не по строке OperationType. Один заказ может вносить вклад в несколько групп.
             var svc = new ReportingService();
             var orders = new List<OrderHistory>
             {
-                Order(Apr01, "Bending", 50_000m),
-                Order(Apr01, "Laser", 200_000m),
-                Order(Apr01, "Laser", 100_000m),
-                Order(Apr01, "Welding", 80_000m),
+                // Лазер + Металл (типичный заказ резки)
+                CostOrder(Apr01, material: 80_000m, laser: 120_000m),
+                // Только лазер (сортамент с известной массой не требует листа)
+                CostOrder(Apr01, laser: 100_000m),
+                // Гибка + Металл
+                CostOrder(Apr01, material: 30_000m, bending: 50_000m),
+                // Сварка
+                CostOrder(Apr01, welding: 80_000m),
             };
 
             var summary = svc.BuildSummary(orders, Apr01, May01);
 
-            Assert.AreEqual(3, summary.ByOperation.Count);
+            // Итоги: Лазер 220k > Металл 110k > Сварка 80k > Гибка 50k.
+            Assert.AreEqual(4, summary.ByOperation.Count);
+            Assert.AreEqual("Лазер",  summary.ByOperation[0].OperationType);
+            Assert.AreEqual(220_000m, summary.ByOperation[0].Revenue);
+            Assert.AreEqual(2, summary.ByOperation[0].Count, "Два заказа с laser>0");
 
-            // Laser = 300k → самый денежный → идёт первым.
-            Assert.AreEqual("Laser", summary.ByOperation[0].OperationType);
-            Assert.AreEqual(300_000m, summary.ByOperation[0].Revenue);
-            Assert.AreEqual(2, summary.ByOperation[0].Count);
+            Assert.AreEqual("Металл", summary.ByOperation[1].OperationType);
+            Assert.AreEqual(110_000m, summary.ByOperation[1].Revenue);
 
-            // Welding = 80k → второй.
-            Assert.AreEqual("Welding", summary.ByOperation[1].OperationType);
+            Assert.AreEqual("Сварка", summary.ByOperation[2].OperationType);
+            Assert.AreEqual(80_000m,  summary.ByOperation[2].Revenue);
 
-            // Bending = 50k → последний.
-            Assert.AreEqual("Bending", summary.ByOperation[2].OperationType);
+            Assert.AreEqual("Гибка",  summary.ByOperation[3].OperationType);
+            Assert.AreEqual(50_000m,  summary.ByOperation[3].Revenue);
 
-            // Доли в сумме ≈ 1.0 (с плавающей точностью).
+            // Сумма долей по 4 категориям ≈ 1.0, потому что cost-поля точно складываются в TotalPrice.
             var totalShare = summary.ByOperation.Sum(b => b.ShareOfRevenue);
             Assert.AreEqual(1.0, totalShare, 0.0001);
         }
 
         [TestMethod]
-        public void BuildSummary_MultilineOperationType_UsesFirstLineAsShortName()
+        public void BuildSummary_LegacyOrdersWithoutCostBreakdown_ProduceEmptyByOperation()
         {
-            // Сейчас MainViewModel пишет в OperationType весь result.Log (многострочный).
-            // Агрегация должна взять первую строку как короткое имя операции.
+            // Заказы, сохранённые до миграции v4 — все cost-поля = 0, есть только TotalPrice.
+            // Разбивка по операциям не строится (нечего показывать), но KPI считаются нормально.
             var svc = new ReportingService();
             var orders = new List<OrderHistory>
             {
-                Order(Apr01, "Laser\nПодробности: сталь 3мм × 10м\nгаз: O2", 100m),
-                Order(Apr01, "Laser\nПодробности: сталь 5мм × 5м\nгаз: N2",  200m),
+                Order(Apr01, "Laser", 100_000m),
+                Order(Apr01, "Bending", 50_000m),
             };
 
             var summary = svc.BuildSummary(orders, Apr01, May01);
 
-            Assert.AreEqual(1, summary.ByOperation.Count,
-                "Обе записи должны попасть в одну группу 'Laser'");
-            Assert.AreEqual("Laser", summary.ByOperation[0].OperationType);
-            Assert.AreEqual(300m, summary.ByOperation[0].Revenue);
+            Assert.AreEqual(2, summary.TotalOrders);
+            Assert.AreEqual(150_000m, summary.TotalRevenue);
+            Assert.AreEqual(0, summary.ByOperation.Count,
+                "Без cost-разбивки ByOperation должна быть пустой — это сигнал, что заказы исторические");
         }
 
         [TestMethod]
