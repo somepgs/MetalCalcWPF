@@ -36,6 +36,8 @@ namespace MetalCalcWPF.Infrastructure.Migrations
             ctx.Database.ExecuteSqlRaw(WeldingProfileDdl);
             ctx.Database.ExecuteSqlRaw(RolledProfileDdl);
             ctx.Database.ExecuteSqlRaw(OrderHistoryDdl);
+            ctx.Database.ExecuteSqlRaw(WorkshopDdl);
+            ctx.Database.ExecuteSqlRaw(PersonDdl);
         }
 
         // ---- DDL всех таблиц v1 ------------------------------------------------
@@ -164,6 +166,29 @@ CREATE TABLE IF NOT EXISTS ""OrderHistory"" (
     ""LaserCost"" decimal not null default 0,
     ""BendingCost"" decimal not null default 0,
     ""WeldingCost"" decimal not null default 0
+)";
+
+        // Workshop / Person — справочники для workflow заказов (миграция v5).
+        // На свежей БД создаются сразу здесь, V005 только засевает 5 цехов.
+        private const string WorkshopDdl = @"
+CREATE TABLE IF NOT EXISTS ""Workshop"" (
+    ""Id"" integer primary key autoincrement not null,
+    ""Name"" varchar,
+    ""Kind"" integer not null,
+    ""IsActive"" integer not null,
+    ""Notes"" varchar
+)";
+
+        private const string PersonDdl = @"
+CREATE TABLE IF NOT EXISTS ""Person"" (
+    ""Id"" integer primary key autoincrement not null,
+    ""FullName"" varchar,
+    ""Position"" varchar,
+    ""WorkshopId"" integer,
+    ""CanSubmit"" integer not null,
+    ""CanAccept"" integer not null,
+    ""IsActive"" integer not null,
+    ""Notes"" varchar
 )";
     }
 }

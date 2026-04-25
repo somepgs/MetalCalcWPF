@@ -62,6 +62,18 @@ namespace MetalCalcWPF.Tests
             public void UpdateCuttingMachine(CuttingMachine machine) { }
             public void DeleteCuttingMachine(int id) { }
             public void UpdateAllCuttingMachines(List<CuttingMachine> list) { }
+            public List<Workshop> GetAllWorkshops() => new List<Workshop>();
+            public Workshop? GetWorkshopById(int id) => null;
+            public int AddWorkshop(Workshop workshop) => 0;
+            public void UpdateWorkshop(Workshop workshop) { }
+            public void DeleteWorkshop(int id) { }
+            public void UpdateAllWorkshops(List<Workshop> list) { }
+            public List<Person> GetAllPersons() => new List<Person>();
+            public Person? GetPersonById(int id) => null;
+            public int AddPerson(Person person) => 0;
+            public void UpdatePerson(Person person) { }
+            public void DeletePerson(int id) { }
+            public void UpdateAllPersons(List<Person> list) { }
         }
 
         /// <summary>
