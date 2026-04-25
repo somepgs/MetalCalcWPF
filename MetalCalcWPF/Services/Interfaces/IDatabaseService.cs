@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MetalCalcWPF.Models;
 
@@ -15,6 +16,14 @@ namespace MetalCalcWPF.Services.Interfaces
         void SaveOrder(OrderHistory order);
         void DeleteOrder(int id);
         List<OrderHistory> GetRecentOrders();
+
+        /// <summary>
+        /// Возвращает заказы в заданном диапазоне дат для отчётности руководству.
+        /// Полуоткрытый интервал <c>[startInclusive; endExclusive)</c> — так легко
+        /// передавать «за месяц» (например, с 1 апреля 00:00 по 1 мая 00:00), и
+        /// не теряется последний день из-за времени суток.
+        /// </summary>
+        List<OrderHistory> GetOrdersByDateRange(DateTime startInclusive, DateTime endExclusive);
         
         List<MaterialType> GetMaterials();
         void UpdateAllMaterials(List<MaterialType> list);

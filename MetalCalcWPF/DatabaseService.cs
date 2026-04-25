@@ -545,8 +545,22 @@ namespace MetalCalcWPF
         {
             using var ctx = CreateContext();
             return ctx.OrderHistory
+                      .AsNoTracking()
                       .OrderByDescending(o => o.CreatedDate)
                       .Take(50)
+                      .ToList();
+        }
+
+        public List<OrderHistory> GetOrdersByDateRange(DateTime startInclusive, DateTime endExclusive)
+        {
+            if (endExclusive <= startInclusive)
+                return new List<OrderHistory>();
+
+            using var ctx = CreateContext();
+            return ctx.OrderHistory
+                      .AsNoTracking()
+                      .Where(o => o.CreatedDate >= startInclusive && o.CreatedDate < endExclusive)
+                      .OrderByDescending(o => o.CreatedDate)
                       .ToList();
         }
 

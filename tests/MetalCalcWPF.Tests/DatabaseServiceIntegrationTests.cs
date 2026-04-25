@@ -99,5 +99,58 @@ namespace MetalCalcWPF.Tests
             Assert.AreEqual(materialCountAfterFirst, db3.GetMaterials().Count,
                 "Сид не должен дублироваться при повторных открытиях БД");
         }
+
+        [TestMethod]
+        public void GetOrdersByDateRange_ReturnsOnlyOrdersInsideHalfOpenInterval()
+        {
+            // Готовим 4 заказа в разных датах: за границей слева, внутри, внутри, за границей справа.
+            var db = new DatabaseService(_dbPath);
+
+            // ВАЖНО: CreatedDate хранится как ticks → можно сравнивать DateTime напрямую
+            // (AppDbContext настраивает ValueConverter<DateTime, long> глобально).
+            var march31 = new DateTime(2025, 3, 31, 23, 59, 59);  // до периода
+            var april05 = new DateTime(2025, 4, 5,  10, 0, 0);    // внутри
+            var april25 = new DateTime(2025, 4, 25, 18, 30, 0);   // внутри
+            var may01   = new DateTime(2025, 5, 1,  0,  0,  0);   // граница — НЕ входит (endExclusive)
+
+            db.SaveOrder(new OrderHistory { CreatedDate = march31, ClientName = "До", Description = "x", OperationType = "Laser", TotalPrice = 100m });
+            db.SaveOrder(new OrderHistory { CreatedDate = april05, ClientName = "Внутри-1", Description = "x", OperationType = "Laser", TotalPrice = 200m });
+            db.SaveOrder(new OrderHistory { CreatedDate = april25, ClientName = "Внутри-2", Description = "x", OperationType = "Bending", TotalPrice = 300m });
+            db.SaveOrder(new OrderHistory { CreatedDate = may01,   ClientName = "После", Description = "x", OperationType = "Laser", TotalPrice = 400m });
+
+            // Период «апрель 2025»: [01.04.2025 00:00 ; 01.05.2025 00:00)
+            var start = new DateTime(2025, 4, 1);
+            var end   = new DateTime(2025, 5, 1);
+
+            var result = db.GetOrdersByDateRange(start, end);
+
+            Assert.AreEqual(2, result.Count, "В апрель должны попасть ровно 2 заказа");
+            // Порядок — по убыванию даты (новый сверху).
+            Assert.AreEqual("Внутри-2", result[0].ClientName);
+            Assert.AreEqual("Внутри-1", result[1].ClientName);
+        }
+
+        [TestMethod]
+        public void GetOrdersByDateRange_InvertedRange_ReturnsEmpty()
+        {
+            // Защитный контракт: end <= start → пустой список, без исключения.
+            var db = new DatabaseService(_dbPath);
+            db.SaveOrder(new OrderHistory
+            {
+                CreatedDate = DateTime.UtcNow,
+                ClientName = "любой",
+                Description = "x",
+                OperationType = "Laser",
+                TotalPrice = 1m,
+            });
+
+            var end   = new DateTime(2025, 1, 1);
+            var start = new DateTime(2025, 6, 1);
+
+            var result = db.GetOrdersByDateRange(start, end);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.Count);
+        }
     }
 }
