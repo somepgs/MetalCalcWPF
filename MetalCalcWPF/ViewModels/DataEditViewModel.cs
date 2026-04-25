@@ -29,6 +29,13 @@ namespace MetalCalcWPF.ViewModels
             CuttingMachines = new ObservableCollection<CuttingMachine>(_databaseService.GetAllCuttingMachines());
             AllCuttingMachineKinds = Enum.GetValues<CuttingMachineKind>().ToList();
 
+            // --- ✅ ЦЕХА И КЛИЕНТЫ (миграция v5) ---
+            Workshops = new ObservableCollection<Workshop>(_databaseService.GetAllWorkshops());
+            AllWorkshopKinds = Enum.GetValues<WorkshopKind>().ToList();
+
+            // --- ✅ СОТРУДНИКИ (миграция v5) ---
+            Persons = new ObservableCollection<Person>(_databaseService.GetAllPersons());
+
             // --- ✅ СОРТАМЕНТ ПРОКАТА ---
             RolledProfiles = new ObservableCollection<RolledProfile>(_databaseService.GetAllRolledProfiles());
             RolledProfilesView = CollectionViewSource.GetDefaultView(RolledProfiles);
@@ -50,6 +57,12 @@ namespace MetalCalcWPF.ViewModels
 
             AddCuttingMachineCommand = new RelayCommand(_ => AddCuttingMachine());
             DeleteCuttingMachineCommand = new RelayCommand(m => DeleteCuttingMachine(m as CuttingMachine));
+
+            AddWorkshopCommand = new RelayCommand(_ => AddWorkshop());
+            DeleteWorkshopCommand = new RelayCommand(w => DeleteWorkshop(w as Workshop));
+
+            AddPersonCommand = new RelayCommand(_ => AddPerson());
+            DeletePersonCommand = new RelayCommand(p => DeletePerson(p as Person));
         }
 
         public ObservableCollection<MaterialType> Materials { get; }
@@ -82,11 +95,22 @@ namespace MetalCalcWPF.ViewModels
         public ObservableCollection<CuttingMachine> CuttingMachines { get; }
         public List<CuttingMachineKind> AllCuttingMachineKinds { get; }
 
+        // --- ✅ ЦЕХА (миграция v5) ---
+        public ObservableCollection<Workshop> Workshops { get; }
+        public List<WorkshopKind> AllWorkshopKinds { get; }
+
+        // --- ✅ СОТРУДНИКИ (миграция v5) ---
+        public ObservableCollection<Person> Persons { get; }
+
         public RelayCommand SaveCommand { get; }
         public RelayCommand AddRolledProfileCommand { get; }
         public RelayCommand DeleteRolledProfileCommand { get; }
         public RelayCommand AddCuttingMachineCommand { get; }
         public RelayCommand DeleteCuttingMachineCommand { get; }
+        public RelayCommand AddWorkshopCommand { get; }
+        public RelayCommand DeleteWorkshopCommand { get; }
+        public RelayCommand AddPersonCommand { get; }
+        public RelayCommand DeletePersonCommand { get; }
 
         private void AddRolledProfile()
         {
@@ -133,6 +157,43 @@ namespace MetalCalcWPF.ViewModels
             CuttingMachines.Remove(machine);
         }
 
+        private void AddWorkshop()
+        {
+            Workshops.Add(new Workshop
+            {
+                Name = "Новый цех / клиент",
+                Kind = WorkshopKind.Internal,
+                IsActive = true,
+                Notes = string.Empty,
+            });
+        }
+
+        private void DeleteWorkshop(Workshop? workshop)
+        {
+            if (workshop == null) return;
+            Workshops.Remove(workshop);
+        }
+
+        private void AddPerson()
+        {
+            Persons.Add(new Person
+            {
+                FullName = "Новый сотрудник",
+                Position = "—",
+                WorkshopId = null,
+                CanSubmit = true,
+                CanAccept = false,
+                IsActive = true,
+                Notes = string.Empty,
+            });
+        }
+
+        private void DeletePerson(Person? person)
+        {
+            if (person == null) return;
+            Persons.Remove(person);
+        }
+
         private void Save()
         {
             _databaseService.UpdateAllMaterials(new List<MaterialType>(Materials));
@@ -140,7 +201,9 @@ namespace MetalCalcWPF.ViewModels
             _databaseService.UpdateAllBendingProfiles(new List<BendingProfile>(BendingProfiles));
             _databaseService.UpdateAllWeldingProfiles(new List<WeldingProfile>(WeldingProfiles));
             _databaseService.UpdateAllRolledProfiles(new List<RolledProfile>(RolledProfiles));
-            _databaseService.UpdateAllCuttingMachines(new List<CuttingMachine>(CuttingMachines)); // ✅
+            _databaseService.UpdateAllCuttingMachines(new List<CuttingMachine>(CuttingMachines));
+            _databaseService.UpdateAllWorkshops(new List<Workshop>(Workshops));
+            _databaseService.UpdateAllPersons(new List<Person>(Persons));
 
             _messageService.ShowInfo("База данных успешно обновлена!");
         }

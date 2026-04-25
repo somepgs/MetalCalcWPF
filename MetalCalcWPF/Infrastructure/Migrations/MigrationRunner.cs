@@ -37,7 +37,8 @@ namespace MetalCalcWPF.Infrastructure.Migrations
             new V002_AddCuttingMachines(),
             new V003_AddLaserMinutePrices(),
             new V004_AddOrderCostBreakdown(),
-            // new V005_Xxx(),
+            new V005_AddWorkshopAndPerson(),
+            // new V006_Xxx(),
         };
 
         /// <summary>
