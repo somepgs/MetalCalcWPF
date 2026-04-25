@@ -398,18 +398,53 @@
             </Grid>
         </Border>
 
-        <GroupBox Grid.Column="1" Header="История расчетов" Margin="0,0,0,10">
+        <GroupBox Grid.Column="1" Header="История расчётов / отчёт для руководства" Margin="0,0,0,10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Button Grid.Row="0" Content="📊 Скачать в Excel" HorizontalAlignment="Right"
-                        Width="120" Height="25" Margin="0,5,5,5"
+                <!-- Строка фильтра: даты + быстрая кнопка «Текущий месяц» -->
+                <Grid Grid.Row="0" Margin="5,5,5,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Период:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <DatePicker Grid.Column="1" Width="110" SelectedDate="{Binding FilterStart}"
+                                ToolTip="Дата начала (включительно)"/>
+                    <TextBlock Grid.Column="2" Text="—" VerticalAlignment="Center" Margin="5,0"/>
+                    <DatePicker Grid.Column="3" Width="110" SelectedDate="{Binding FilterEnd}"
+                                ToolTip="Дата окончания (включительно)"/>
+
+                    <Button Grid.Column="4" Content="Текущий месяц" Margin="10,0,0,0" Padding="6,2"
+                            Command="{Binding FilterCurrentMonthCommand}"
+                            ToolTip="Установить период на текущий календарный месяц"/>
+
+                    <StackPanel Grid.Column="6" Orientation="Horizontal">
+                        <Button Content="Применить" Padding="8,2" Margin="0,0,5,0"
+                                Command="{Binding ApplyHistoryFilterCommand}"
+                                Background="#C8E6C9"/>
+                        <Button Content="Сброс" Padding="8,2"
+                                Command="{Binding ResetHistoryFilterCommand}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Кнопка экспорта -->
+                <Button Grid.Row="1" Content="📊 Скачать в Excel (отчёт для руководства)"
+                        HorizontalAlignment="Right" Width="280" Height="25" Margin="0,5,5,5"
                         Command="{Binding ExportToExcelCommand}" Background="#E0F7FA"/>
 
-                <DataGrid Grid.Row="1" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedHistory}"
+                <DataGrid Grid.Row="2" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedHistory}"
                           AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
                     <DataGrid.ContextMenu>
                         <ContextMenu>
@@ -429,6 +464,12 @@
                         <DataGridTextColumn Header="Сумма" Binding="{Binding TotalPrice, StringFormat=\{0:N0\} ₸}" Width="70" FontWeight="Bold"/>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <!-- KPI-строка под таблицей: «N заказов на X ₸, средний чек …» -->
+                <Border Grid.Row="3" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0"
+                        Padding="8,4">
+                    <TextBlock Text="{Binding HistorySummaryText}" FontWeight="SemiBold"/>
+                </Border>
             </Grid>
         </GroupBox>
     </Grid>

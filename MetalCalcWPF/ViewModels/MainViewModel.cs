@@ -6,6 +6,7 @@ using System.Windows.Data;
 using ClosedXML.Excel;
 using MetalCalcWPF.Infrastructure;
 using MetalCalcWPF.Models;
+using MetalCalcWPF.Models.Reporting;
 using MetalCalcWPF.Services;
 using MetalCalcWPF.Services.Calculation;
 using MetalCalcWPF.Services.Interfaces;
@@ -20,6 +21,14 @@ namespace MetalCalcWPF.ViewModels
         private readonly IWindowService _windowService;
         private readonly IFileDialogService _fileDialogService;
         private readonly IMessageService _messageService;
+        private readonly IReportingService _reportingService;
+
+        // ====== Отчётность (Спринт 2.3) ======
+        // Фильтр истории: NULL означает «без фильтра, показываем последние 50 через GetRecentOrders».
+        // Храним как DateTime?, чтобы DatePicker мог быть пустым.
+        private DateTime? _filterStart;
+        private DateTime? _filterEnd;
+        private string _historySummaryText = string.Empty;
 
         private string _clientName = string.Empty;
         private string _thicknessText = string.Empty;
@@ -55,13 +64,15 @@ namespace MetalCalcWPF.ViewModels
             IWindowService windowService,
             IFileDialogService fileDialogService,
             IMessageService messageService,
-            ICalculationService calculationService)
+            ICalculationService calculationService,
+            IReportingService reportingService)
         {
             _databaseService = databaseService;
             _windowService = windowService;
             _fileDialogService = fileDialogService;
             _messageService = messageService;
             _calculator = calculationService;
+            _reportingService = reportingService;
 
             Materials = new ObservableCollection<MaterialType>(_databaseService.GetMaterials());
             History = new ObservableCollection<OrderHistory>(_databaseService.GetRecentOrders());
@@ -100,6 +111,12 @@ namespace MetalCalcWPF.ViewModels
             ExportToExcelCommand = new RelayCommand(_ => ExportToExcel());
             OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
             OpenDatabaseCommand = new RelayCommand(_ => OpenDatabaseEditor());
+            ApplyHistoryFilterCommand = new RelayCommand(_ => ApplyHistoryFilter());
+            ResetHistoryFilterCommand = new RelayCommand(_ => ResetHistoryFilter());
+            FilterCurrentMonthCommand = new RelayCommand(_ => FilterCurrentMonth());
+
+            // Первичная подпись под таблицей: «Последние N заказов, сумма …».
+            UpdateHistorySummary();
 
             // Автоматическая валидация при изменении полей
             PropertyChanged += (s, e) =>
@@ -348,6 +365,38 @@ namespace MetalCalcWPF.ViewModels
         public RelayCommand OpenSettingsCommand { get; }
         public RelayCommand OpenDatabaseCommand { get; }
 
+        /// <summary>Применить фильтр истории по выбранным датам.</summary>
+        public RelayCommand ApplyHistoryFilterCommand { get; }
+
+        /// <summary>Сбросить фильтр — показать последние 50 заказов.</summary>
+        public RelayCommand ResetHistoryFilterCommand { get; }
+
+        /// <summary>Быстрая кнопка «За текущий месяц».</summary>
+        public RelayCommand FilterCurrentMonthCommand { get; }
+
+        // ====== Свойства фильтра истории (Спринт 2.3) ======
+
+        /// <summary>Начало отчётного периода (включительно). NULL = без фильтра.</summary>
+        public DateTime? FilterStart
+        {
+            get => _filterStart;
+            set => SetProperty(ref _filterStart, value);
+        }
+
+        /// <summary>Конец отчётного периода (включительно, в UI — так удобнее пользователю).</summary>
+        public DateTime? FilterEnd
+        {
+            get => _filterEnd;
+            set => SetProperty(ref _filterEnd, value);
+        }
+
+        /// <summary>Строка-саммари под таблицей: «За период … — 12 заказов на 345 000 ₸».</summary>
+        public string HistorySummaryText
+        {
+            get => _historySummaryText;
+            private set => SetProperty(ref _historySummaryText, value);
+        }
+
         private void Calculate()
         {
             try
@@ -530,15 +579,21 @@ namespace MetalCalcWPF.ViewModels
             }
         }
 
+        /// <summary>
+        /// Экспорт отчёта для руководства. Если фильтр задан — берём период фильтра,
+        /// иначе отчёт строится «от даты самого старого заказа до сейчас», чтобы
+        /// файл никогда не лгал периодом («последние 50» ≠ конкретный месяц).
+        /// </summary>
         private void ExportToExcel()
         {
             try
             {
-                var history = _databaseService.GetRecentOrders();
+                // Определяем, какие заказы и за какой период идут в отчёт.
+                var (orders, periodStart, periodEnd) = GetOrdersForReport();
 
-                if (history.Count == 0)
+                if (orders.Count == 0)
                 {
-                    _messageService.ShowInfo("История пуста, нечего выгружать!");
+                    _messageService.ShowInfo("За выбранный период нет заказов — нечего выгружать.");
                     return;
                 }
 
@@ -548,45 +603,85 @@ namespace MetalCalcWPF.ViewModels
 
                 if (string.IsNullOrWhiteSpace(filePath)) return;
 
-                using (var workbook = new XLWorkbook())
-                {
-                    var worksheet = workbook.Worksheets.Add("Заказы");
+                var summary = _reportingService.BuildSummary(orders, periodStart, periodEnd);
+                _reportingService.ExportToExcel(orders, summary, filePath);
 
-                    // Заголовки
-                    worksheet.Cell(1, 1).Value = "№";
-                    worksheet.Cell(1, 2).Value = "Дата";
-                    worksheet.Cell(1, 3).Value = "Тип";
-                    worksheet.Cell(1, 4).Value = "Клиент";
-                    worksheet.Cell(1, 5).Value = "Описание";
-                    worksheet.Cell(1, 6).Value = "Цена (₸)";
-
-                    var headerRange = worksheet.Range("A1:F1");
-                    headerRange.Style.Font.Bold = true;
-                    headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
-
-                    // Данные
-                    int row = 2;
-                    foreach (var item in history)
-                    {
-                        worksheet.Cell(row, 1).Value = item.Id;
-                        worksheet.Cell(row, 2).Value = item.CreatedDate;
-                        worksheet.Cell(row, 3).Value = item.OperationType;
-                        worksheet.Cell(row, 4).Value = item.ClientName;
-                        worksheet.Cell(row, 5).Value = item.Description;
-                        worksheet.Cell(row, 6).Value = item.TotalPrice;
-                        row++;
-                    }
-
-                    worksheet.Columns().AdjustToContents();
-                    workbook.SaveAs(filePath);
-                }
-
-                _messageService.ShowInfo($"Файл успешно сохранен!\n{filePath}");
+                _messageService.ShowInfo(
+                    $"Отчёт сохранён: {orders.Count} заказов, выручка {summary.TotalRevenue:N0} ₸\n{filePath}");
             }
             catch (Exception ex)
             {
                 _messageService.ShowError("Ошибка при экспорте: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Собирает набор заказов + период под текущее состояние UI.
+        /// Если фильтр выключен — использует самую раннюю дату заказа из БД,
+        /// чтобы в шапке отчёта стоял реальный диапазон, а не «с 01.01.0001».
+        /// </summary>
+        private (System.Collections.Generic.List<OrderHistory> orders, DateTime start, DateTime end) GetOrdersForReport()
+        {
+            if (TryGetFilterRange(out var start, out var end))
+            {
+                return (_databaseService.GetOrdersByDateRange(start, end), start, end);
+            }
+
+            var all = _databaseService.GetRecentOrders();
+            var minDate = all.Count > 0 ? all.Min(o => o.CreatedDate).Date : DateTime.Today;
+            var maxExclusive = DateTime.Today.AddDays(1);
+            return (all, minDate, maxExclusive);
+        }
+
+        /// <summary>
+        /// Нормализует введённые в DatePicker даты в полуоткрытый интервал
+        /// <c>[start; end)</c>, понимаемый <see cref="IDatabaseService.GetOrdersByDateRange"/>.
+        /// Пользователь вводит «включительно по 30 апреля» — в БД уходит 1 мая.
+        /// </summary>
+        private bool TryGetFilterRange(out DateTime start, out DateTime end)
+        {
+            if (FilterStart == null && FilterEnd == null)
+            {
+                start = default;
+                end = default;
+                return false;
+            }
+
+            start = FilterStart?.Date ?? DateTime.MinValue.Date;
+            var endInclusive = FilterEnd?.Date ?? DateTime.Today;
+            end = endInclusive.AddDays(1);
+            return true;
+        }
+
+        private void ApplyHistoryFilter()
+        {
+            if (FilterStart != null && FilterEnd != null && FilterEnd < FilterStart)
+            {
+                _messageService.ShowError("Дата окончания меньше даты начала — исправьте диапазон.");
+                return;
+            }
+            ReloadHistory();
+        }
+
+        private void ResetHistoryFilter()
+        {
+            FilterStart = null;
+            FilterEnd = null;
+            ReloadHistory();
+        }
+
+        /// <summary>
+        /// Быстрая кнопка «Текущий месяц»: пресет для ПТО/начальника цеха,
+        /// которые каждый 1-го числа хотят отчёт по предыдущему периоду.
+        /// </summary>
+        private void FilterCurrentMonth()
+        {
+            var today = DateTime.Today;
+            var firstDay = new DateTime(today.Year, today.Month, 1);
+            var lastDay = firstDay.AddMonths(1).AddDays(-1);
+            FilterStart = firstDay;
+            FilterEnd = lastDay;
+            ReloadHistory();
         }
 
         private void OpenSettings()
@@ -603,10 +698,40 @@ namespace MetalCalcWPF.ViewModels
         private void ReloadHistory()
         {
             History.Clear();
-            foreach (var order in _databaseService.GetRecentOrders())
+            var orders = TryGetFilterRange(out var start, out var end)
+                ? _databaseService.GetOrdersByDateRange(start, end)
+                : _databaseService.GetRecentOrders();
+
+            foreach (var order in orders)
             {
                 History.Add(order);
             }
+
+            UpdateHistorySummary();
+        }
+
+        /// <summary>
+        /// Обновляет короткую KPI-строку под таблицей. Используем тот же
+        /// <see cref="IReportingService"/>, что и для Excel-экспорта — одна формула,
+        /// один источник правды.
+        /// </summary>
+        private void UpdateHistorySummary()
+        {
+            if (History.Count == 0)
+            {
+                HistorySummaryText = TryGetFilterRange(out var s, out var e)
+                    ? $"За период {s:dd.MM.yyyy}–{e.AddDays(-1):dd.MM.yyyy}: заказов нет"
+                    : "История пуста";
+                return;
+            }
+
+            var snapshot = History.ToList();
+            var periodStart = TryGetFilterRange(out var rs, out _) ? rs : snapshot.Min(o => o.CreatedDate).Date;
+            var periodEnd   = TryGetFilterRange(out _, out var re) ? re : DateTime.Today.AddDays(1);
+
+            var summary = _reportingService.BuildSummary(snapshot, periodStart, periodEnd);
+            HistorySummaryText =
+                $"{summary.TotalOrders} заказов на {summary.TotalRevenue:N0} ₸  •  средний чек {summary.AverageOrderValue:N0} ₸";
         }
 
         private void ReloadMaterials()
