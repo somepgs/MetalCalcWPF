@@ -47,6 +47,8 @@ namespace MetalCalcWPF.Infrastructure.Persistence
         public DbSet<RolledProfile> RolledProfiles => Set<RolledProfile>();
         public DbSet<OrderHistory> OrderHistory => Set<OrderHistory>();
         public DbSet<CuttingMachine> CuttingMachines => Set<CuttingMachine>();
+        public DbSet<Workshop> Workshops => Set<Workshop>();
+        public DbSet<Person> Persons => Set<Person>();
         public DbSet<SchemaVersion> SchemaVersions => Set<SchemaVersion>();
 
         protected override void OnModelCreating(ModelBuilder mb)
@@ -127,6 +129,27 @@ namespace MetalCalcWPF.Infrastructure.Persistence
             {
                 e.ToTable("CuttingMachine");
                 e.HasKey(x => x.Id);
+            });
+
+            mb.Entity<Workshop>(e =>
+            {
+                e.ToTable("Workshop");
+                e.HasKey(x => x.Id);
+            });
+
+            mb.Entity<Person>(e =>
+            {
+                e.ToTable("Person");
+                e.HasKey(x => x.Id);
+
+                // FK не enforce-им через Restrict/Cascade на уровне БД: справочники
+                // редактируются вручную, цеха могут переименовываться/удаляться
+                // быстрее, чем заявители. Целостность поддерживается приложением
+                // (валидация при сохранении заказа).
+                e.HasOne<Workshop>()
+                 .WithMany()
+                 .HasForeignKey(p => p.WorkshopId)
+                 .OnDelete(DeleteBehavior.SetNull);
             });
 
             mb.Entity<SchemaVersion>(e =>

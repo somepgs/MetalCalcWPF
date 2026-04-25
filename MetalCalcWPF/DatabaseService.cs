@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -698,6 +699,149 @@ namespace MetalCalcWPF
             ctx.CuttingMachines.ExecuteDelete();
             ctx.CuttingMachines.AddRange(list);
             ctx.SaveChanges();
+        }
+
+        // =================== ЦЕХА / ВНЕШНИЕ КЛИЕНТЫ ===================
+        //
+        // Workshop реально ссылается из Person.WorkshopId, и в Этапе 3 будет
+        // ссылаться из OrderHistory. Поэтому, в отличие от CuttingMachine, мы
+        // НЕ выполняем DELETE+INSERT в UpdateAllWorkshops — нужно сохранять Id.
+
+        public List<Workshop> GetAllWorkshops()
+        {
+            using var ctx = CreateContext();
+            return ctx.Workshops
+                      .AsNoTracking()
+                      .OrderBy(w => w.Kind)
+                      .ThenBy(w => w.Name)
+                      .ToList();
+        }
+
+        public Workshop? GetWorkshopById(int id)
+        {
+            using var ctx = CreateContext();
+            return ctx.Workshops.AsNoTracking().FirstOrDefault(w => w.Id == id);
+        }
+
+        public int AddWorkshop(Workshop workshop)
+        {
+            using var ctx = CreateContext();
+            ctx.Workshops.Add(workshop);
+            ctx.SaveChanges();
+            return workshop.Id;
+        }
+
+        public void UpdateWorkshop(Workshop workshop)
+        {
+            using var ctx = CreateContext();
+            ctx.Workshops.Update(workshop);
+            ctx.SaveChanges();
+        }
+
+        public void DeleteWorkshop(int id)
+        {
+            using var ctx = CreateContext();
+            var entity = ctx.Workshops.Find(id);
+            if (entity != null)
+            {
+                ctx.Workshops.Remove(entity);
+                ctx.SaveChanges();
+            }
+        }
+
+        public void UpdateAllWorkshops(List<Workshop> list)
+        {
+            using var ctx = CreateContext();
+            DiffSync(ctx, ctx.Workshops, list, w => w.Id);
+            ctx.SaveChanges();
+        }
+
+        // =================== СОТРУДНИКИ / КОНТАКТЫ ===================
+
+        public List<Person> GetAllPersons()
+        {
+            using var ctx = CreateContext();
+            return ctx.Persons
+                      .AsNoTracking()
+                      .OrderBy(p => p.FullName)
+                      .ToList();
+        }
+
+        public Person? GetPersonById(int id)
+        {
+            using var ctx = CreateContext();
+            return ctx.Persons.AsNoTracking().FirstOrDefault(p => p.Id == id);
+        }
+
+        public int AddPerson(Person person)
+        {
+            using var ctx = CreateContext();
+            ctx.Persons.Add(person);
+            ctx.SaveChanges();
+            return person.Id;
+        }
+
+        public void UpdatePerson(Person person)
+        {
+            using var ctx = CreateContext();
+            ctx.Persons.Update(person);
+            ctx.SaveChanges();
+        }
+
+        public void DeletePerson(int id)
+        {
+            using var ctx = CreateContext();
+            var entity = ctx.Persons.Find(id);
+            if (entity != null)
+            {
+                ctx.Persons.Remove(entity);
+                ctx.SaveChanges();
+            }
+        }
+
+        public void UpdateAllPersons(List<Person> list)
+        {
+            using var ctx = CreateContext();
+            DiffSync(ctx, ctx.Persons, list, p => p.Id);
+            ctx.SaveChanges();
+        }
+
+        // ===========================================================
+        // Универсальный diff-sync для справочников, на которые ссылаются
+        // другие таблицы. В отличие от ExecuteDelete+AddRange, сохраняет Id
+        // существующих записей — внешние ссылки не ломаются.
+        //   • новые элементы (Id == 0) добавляются;
+        //   • существующие (Id > 0) обновляются;
+        //   • строки в БД, которых нет в списке, удаляются.
+        // ===========================================================
+        private static void DiffSync<T>(
+            AppDbContext ctx,
+            DbSet<T> set,
+            List<T> wantedList,
+            Func<T, int> idSelector) where T : class
+        {
+            var wantedIds = wantedList.Where(x => idSelector(x) > 0)
+                                      .Select(idSelector)
+                                      .ToHashSet();
+
+            // Удаляем то, чего больше нет в списке.
+            var existingIds = set.AsNoTracking().Select(idSelector).ToList();
+            var toDeleteIds = existingIds.Where(id => !wantedIds.Contains(id)).ToList();
+            if (toDeleteIds.Count > 0)
+            {
+                foreach (var id in toDeleteIds)
+                {
+                    var entity = set.Find(id);
+                    if (entity != null) set.Remove(entity);
+                }
+            }
+
+            // Добавляем новые / обновляем существующие.
+            foreach (var item in wantedList)
+            {
+                if (idSelector(item) == 0) set.Add(item);
+                else                       set.Update(item);
+            }
         }
     }
 }

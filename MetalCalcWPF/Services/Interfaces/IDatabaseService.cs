@@ -55,5 +55,21 @@ namespace MetalCalcWPF.Services.Interfaces
         void UpdateCuttingMachine(CuttingMachine machine);
         void DeleteCuttingMachine(int id);
         void UpdateAllCuttingMachines(List<CuttingMachine> list);
+
+        // Цеха и внешние клиенты (миграция v5).
+        List<Workshop> GetAllWorkshops();
+        Workshop? GetWorkshopById(int id);
+        int AddWorkshop(Workshop workshop);
+        void UpdateWorkshop(Workshop workshop);
+        void DeleteWorkshop(int id);
+        void UpdateAllWorkshops(List<Workshop> list);
+
+        // Сотрудники: заявители и приёмщики заказов (миграция v5).
+        List<Person> GetAllPersons();
+        Person? GetPersonById(int id);
+        int AddPerson(Person person);
+        void UpdatePerson(Person person);
+        void DeletePerson(int id);
+        void UpdateAllPersons(List<Person> list);
     }
 }

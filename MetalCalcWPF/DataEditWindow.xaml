@@ -17,6 +17,11 @@
                 <x:Type TypeName="models:CuttingMachineKind"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+        <ObjectDataProvider x:Key="WorkshopKindValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="models:WorkshopKind"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
         <infra:ProfileKindDisplayConverter x:Key="KindRu"/>
     </Window.Resources>
 
@@ -224,6 +229,89 @@
                                                 Binding="{Binding MinChargePerJob, StringFormat=N0}" Width="100"/>
                             <DataGridTextColumn Header="Цена/м (override)"
                                                 Binding="{Binding PricePerMeterOverride, TargetNullValue=''}" Width="120"/>
+                            <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
+                            <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ✅ Этап 2: Цеха предприятия и внешние клиенты -->
+            <TabItem Header="🏭 Цеха / клиенты">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                        <Button Content="➕ Добавить"
+                                Command="{Binding AddWorkshopCommand}"
+                                Padding="10,5" Margin="0,0,10,0"/>
+                        <Button Content="🗑 Удалить выбранный"
+                                Command="{Binding DeleteWorkshopCommand}"
+                                CommandParameter="{Binding ElementName=WorkshopGrid, Path=SelectedItem}"
+                                Padding="10,5"/>
+                        <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" FontStyle="Italic" Foreground="#666"
+                                   Text="Внутренние цеха (5 наших) и внешние клиенты — заказчики работы цеха металлообработки."/>
+                    </StackPanel>
+
+                    <DataGrid x:Name="WorkshopGrid" Grid.Row="1"
+                              ItemsSource="{Binding Workshops}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              HeadersVisibility="Column"
+                              RowHeight="28">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="280"/>
+                            <DataGridComboBoxColumn Header="Тип"
+                                                    SelectedItemBinding="{Binding Kind}"
+                                                    ItemsSource="{Binding Source={StaticResource WorkshopKindValues}}"
+                                                    Width="130"/>
+                            <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
+                            <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ✅ Этап 2: Сотрудники (заявители + приёмщики заказов) -->
+            <TabItem Header="👥 Сотрудники">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                        <Button Content="➕ Добавить"
+                                Command="{Binding AddPersonCommand}"
+                                Padding="10,5" Margin="0,0,10,0"/>
+                        <Button Content="🗑 Удалить выбранного"
+                                Command="{Binding DeletePersonCommand}"
+                                CommandParameter="{Binding ElementName=PersonGrid, Path=SelectedItem}"
+                                Padding="10,5"/>
+                        <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" FontStyle="Italic" Foreground="#666"
+                                   Text="Заявители (CanSubmit) подают заявки. Приёмщики (CanAccept) — мастера/бригадиры/ПТО, фиксируют заказ в нашем цехе."/>
+                    </StackPanel>
+
+                    <DataGrid x:Name="PersonGrid" Grid.Row="1"
+                              ItemsSource="{Binding Persons}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              HeadersVisibility="Column"
+                              RowHeight="28">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="220"/>
+                            <DataGridTextColumn Header="Должность" Binding="{Binding Position}" Width="160"/>
+                            <DataGridComboBoxColumn Header="Цех"
+                                                    SelectedValueBinding="{Binding WorkshopId}"
+                                                    SelectedValuePath="Id"
+                                                    DisplayMemberPath="Name"
+                                                    ItemsSource="{Binding DataContext.Workshops, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    Width="220"/>
+                            <DataGridCheckBoxColumn Header="Заявитель" Binding="{Binding CanSubmit}" Width="80"/>
+                            <DataGridCheckBoxColumn Header="Приёмщик" Binding="{Binding CanAccept}" Width="80"/>
                             <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
                             <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
                         </DataGrid.Columns>
