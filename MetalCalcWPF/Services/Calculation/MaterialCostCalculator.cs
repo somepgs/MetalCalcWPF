@@ -92,8 +92,8 @@ namespace MetalCalcWPF.Services.Calculation
             result.Breakdowns.Add(breakdown);
 
             return hasMeasuredWeight
-                ? $"Metal({Math.Round(totalWeightKg, 1)}kg total) "
-                : $"Metal({Math.Round(weightKgPerPart, 1)}kg x {request.Quantity}) ";
+                ? $"Металл({Math.Round(totalWeightKg, 1)}кг общ) "
+                : $"Металл({Math.Round(weightKgPerPart, 1)}кг × {request.Quantity}) ";
         }
     }
 }

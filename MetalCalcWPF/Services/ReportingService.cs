@@ -35,25 +35,42 @@ namespace MetalCalcWPF.Services
                 ? summary.TotalRevenue / orders.Count
                 : 0m;
 
-            // Разбивка по OperationType. NB: поле может содержать многострочный
-            // лог расчёта (см. MainViewModel.Calculate → result.Log) — для отчёта
-            // выделяем первую строку как «короткое имя операции». Когда почистим
-            // OperationType до enum, это место упростится до obj.OperationType.
-            summary.ByOperation = orders
-                .GroupBy(o => NormalizeOperationType(o.OperationType))
-                .Select(g => new OperationBreakdown
-                {
-                    OperationType = g.Key,
-                    Count = g.Count(),
-                    Revenue = g.Sum(o => o.TotalPrice),
-                    ShareOfRevenue = summary.TotalRevenue > 0
-                        ? (double)(g.Sum(o => o.TotalPrice) / summary.TotalRevenue)
-                        : 0d,
-                })
+            // Разбивка по 4 cost-колонкам (миграция v4) — теперь источник правды для
+            // «на чём цех заработал» это поля MaterialCost/LaserCost/BendingCost/WeldingCost
+            // в OrderHistory, а не строковый OperationType. Доля считается от TotalRevenue,
+            // поэтому исторические заказы до v4 (где cost-поля = 0) приведут к тому, что
+            // сумма долей будет < 100% — это сигнал руководству, что часть выручки
+            // не размечена.
+            var breakdown = new[]
+            {
+                BuildOpRow(orders, "Металл", o => o.MaterialCost, summary.TotalRevenue),
+                BuildOpRow(orders, "Лазер",  o => o.LaserCost,    summary.TotalRevenue),
+                BuildOpRow(orders, "Гибка",  o => o.BendingCost,  summary.TotalRevenue),
+                BuildOpRow(orders, "Сварка", o => o.WeldingCost,  summary.TotalRevenue),
+            };
+
+            summary.ByOperation = breakdown
+                .Where(b => b.Revenue > 0)
                 .OrderByDescending(b => b.Revenue)
                 .ToList();
 
             return summary;
+        }
+
+        private static OperationBreakdown BuildOpRow(
+            IReadOnlyList<OrderHistory> orders,
+            string label,
+            Func<OrderHistory, decimal> field,
+            decimal totalRevenue)
+        {
+            decimal sum = orders.Sum(field);
+            return new OperationBreakdown
+            {
+                OperationType = label,
+                Count = orders.Count(o => field(o) > 0),
+                Revenue = sum,
+                ShareOfRevenue = totalRevenue > 0 ? (double)(sum / totalRevenue) : 0d,
+            };
         }
 
         public void ExportToExcel(
@@ -175,8 +192,11 @@ namespace MetalCalcWPF.Services
         {
             var ws = workbook.Worksheets.Add("Заказы");
 
+            // 10 колонок: №, Дата, Тип, Клиент, Описание, Металл, Лазер, Гибка, Сварка, Итого.
+            const int colCount = 10;
+
             ws.Cell(1, 1).Value = $"Заказы за период: {FormatPeriod(summary.PeriodStart, summary.PeriodEnd)}";
-            ws.Range(1, 1, 1, 6).Merge();
+            ws.Range(1, 1, 1, colCount).Merge();
             ws.Cell(1, 1).Style.Font.Bold = true;
             ws.Cell(1, 1).Style.Font.FontSize = 12;
 
@@ -187,8 +207,12 @@ namespace MetalCalcWPF.Services
             ws.Cell(headerRow, 3).Value = "Тип";
             ws.Cell(headerRow, 4).Value = "Клиент";
             ws.Cell(headerRow, 5).Value = "Описание";
-            ws.Cell(headerRow, 6).Value = "Сумма (₸)";
-            var headerRange = ws.Range(headerRow, 1, headerRow, 6);
+            ws.Cell(headerRow, 6).Value = "Металл (₸)";
+            ws.Cell(headerRow, 7).Value = "Лазер (₸)";
+            ws.Cell(headerRow, 8).Value = "Гибка (₸)";
+            ws.Cell(headerRow, 9).Value = "Сварка (₸)";
+            ws.Cell(headerRow, 10).Value = "Итого (₸)";
+            var headerRange = ws.Range(headerRow, 1, headerRow, colCount);
             headerRange.Style.Font.Bold = true;
             headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
             headerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
@@ -203,27 +227,37 @@ namespace MetalCalcWPF.Services
                 ws.Cell(row, 3).Value = NormalizeOperationType(order.OperationType);
                 ws.Cell(row, 4).Value = order.ClientName ?? string.Empty;
                 ws.Cell(row, 5).Value = order.Description ?? string.Empty;
-                ws.Cell(row, 6).Value = order.TotalPrice;
-                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+                ws.Cell(row, 6).Value = order.MaterialCost;
+                ws.Cell(row, 7).Value = order.LaserCost;
+                ws.Cell(row, 8).Value = order.BendingCost;
+                ws.Cell(row, 9).Value = order.WeldingCost;
+                ws.Cell(row, 10).Value = order.TotalPrice;
+                ws.Range(row, 6, row, 10).Style.NumberFormat.Format = "#,##0;-#,##0;-";
                 row++;
             }
 
-            // Строка «Итого» по выручке — через формулу SUM, чтобы руководство
-            // видело: это настоящее Excel-значение, а не захардкоженный total.
+            // Строка «Итого» — формулы SUM по каждой стоимостной колонке (F..J).
             if (orders.Count > 0)
             {
                 int firstData = headerRow + 1;
                 int lastData = row - 1;
                 ws.Cell(row, 1).Value = "Итого";
-                ws.Cell(row, 6).FormulaA1 = $"=SUM(F{firstData}:F{lastData})";
-                ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
-                ws.Range(row, 1, row, 6).Style.Font.Bold = true;
-                ws.Range(row, 1, row, 6).Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                for (int col = 6; col <= colCount; col++)
+                {
+                    var letter = ColumnLetter(col);
+                    ws.Cell(row, col).FormulaA1 = $"=SUM({letter}{firstData}:{letter}{lastData})";
+                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0;-#,##0;-";
+                }
+                ws.Range(row, 1, row, colCount).Style.Font.Bold = true;
+                ws.Range(row, 1, row, colCount).Style.Border.TopBorder = XLBorderStyleValues.Thin;
             }
 
             ws.Columns().AdjustToContents();
             ws.SheetView.FreezeRows(headerRow);
         }
+
+        /// <summary>Конвертация номера колонки 1..26 в букву A..Z. Для 10 нам хватит.</summary>
+        private static string ColumnLetter(int col) => ((char)('A' + col - 1)).ToString();
 
         // ======================================================================
         // Хелперы

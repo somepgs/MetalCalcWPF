@@ -115,7 +115,7 @@ namespace MetalCalcWPF.Services.Calculation
                 pierceChargePerOne, laserPerOne, laserForQuantity,
                 machine, overrideUsed, setupCost, minCharge, minApplied, total, result);
 
-            return $"+ Laser({request.PiercesCount}x pierce) ";
+            return $"+ Лазер({request.PiercesCount}× прокол) ";
         }
 
         private CuttingMachine? PickMachine(int? explicitId)
