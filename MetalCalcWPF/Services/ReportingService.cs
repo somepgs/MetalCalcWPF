@@ -183,7 +183,14 @@ namespace MetalCalcWPF.Services
         }
 
         /// <summary>
-        /// Лист «Заказы» — построчная детализация, упорядоченная по дате.
+        /// Лист «Заказы» — построчная детализация под отчёт руководству (Этап 3).
+        ///
+        /// Колонки 1..12 — управленческие (как просило руководство):
+        /// №, Дата поступления, Заявитель, Цех заявителя, Принявший, Срочность,
+        /// Кол-во, Материал, Операции, Масса (кг), Дата выполнения, Сумма.
+        ///
+        /// Колонки 13..16 — детализация cost-разбивки (для бухгалтерии и
+        /// планово-экономического отдела): Металл, Лазер, Гибка, Сварка.
         /// </summary>
         private static void WriteOrdersSheet(
             XLWorkbook workbook,
@@ -192,71 +199,106 @@ namespace MetalCalcWPF.Services
         {
             var ws = workbook.Worksheets.Add("Заказы");
 
-            // 10 колонок: №, Дата, Тип, Клиент, Описание, Металл, Лазер, Гибка, Сварка, Итого.
-            const int colCount = 10;
+            const int colCount = 16;
 
             ws.Cell(1, 1).Value = $"Заказы за период: {FormatPeriod(summary.PeriodStart, summary.PeriodEnd)}";
             ws.Range(1, 1, 1, colCount).Merge();
             ws.Cell(1, 1).Style.Font.Bold = true;
             ws.Cell(1, 1).Style.Font.FontSize = 12;
 
-            // Заголовки таблицы.
+            // Заголовки таблицы — порядок колонок согласован с руководством.
             const int headerRow = 3;
-            ws.Cell(headerRow, 1).Value = "№";
-            ws.Cell(headerRow, 2).Value = "Дата";
-            ws.Cell(headerRow, 3).Value = "Тип";
-            ws.Cell(headerRow, 4).Value = "Клиент";
-            ws.Cell(headerRow, 5).Value = "Описание";
-            ws.Cell(headerRow, 6).Value = "Металл (₸)";
-            ws.Cell(headerRow, 7).Value = "Лазер (₸)";
-            ws.Cell(headerRow, 8).Value = "Гибка (₸)";
-            ws.Cell(headerRow, 9).Value = "Сварка (₸)";
-            ws.Cell(headerRow, 10).Value = "Итого (₸)";
+            ws.Cell(headerRow, 1).Value  = "№";
+            ws.Cell(headerRow, 2).Value  = "Дата поступления";
+            ws.Cell(headerRow, 3).Value  = "Заявитель";
+            ws.Cell(headerRow, 4).Value  = "Цех заявителя";
+            ws.Cell(headerRow, 5).Value  = "Принявший";
+            ws.Cell(headerRow, 6).Value  = "Срочность";
+            ws.Cell(headerRow, 7).Value  = "Кол-во";
+            ws.Cell(headerRow, 8).Value  = "Материал";
+            ws.Cell(headerRow, 9).Value  = "Операции";
+            ws.Cell(headerRow, 10).Value = "Масса (кг)";
+            ws.Cell(headerRow, 11).Value = "Дата выполнения";   // Этап 4 заполнит
+            ws.Cell(headerRow, 12).Value = "Сумма (₸)";
+            ws.Cell(headerRow, 13).Value = "Металл (₸)";
+            ws.Cell(headerRow, 14).Value = "Лазер (₸)";
+            ws.Cell(headerRow, 15).Value = "Гибка (₸)";
+            ws.Cell(headerRow, 16).Value = "Сварка (₸)";
+
             var headerRange = ws.Range(headerRow, 1, headerRow, colCount);
             headerRange.Style.Font.Bold = true;
             headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
             headerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+            headerRange.Style.Alignment.WrapText = true;
+            ws.Row(headerRow).Height = 30;
 
-            // Данные — Id показываем как есть (1, 2, 3...).
             int row = headerRow + 1;
             foreach (var order in orders)
             {
-                ws.Cell(row, 1).Value = order.Id;
-                ws.Cell(row, 2).Value = order.CreatedDate;
+                ws.Cell(row, 1).Value  = order.Id;
+                ws.Cell(row, 2).Value  = order.CreatedDate;
                 ws.Cell(row, 2).Style.DateFormat.Format = "dd.MM.yyyy HH:mm";
-                ws.Cell(row, 3).Value = NormalizeOperationType(order.OperationType);
-                ws.Cell(row, 4).Value = order.ClientName ?? string.Empty;
-                ws.Cell(row, 5).Value = order.Description ?? string.Empty;
-                ws.Cell(row, 6).Value = order.MaterialCost;
-                ws.Cell(row, 7).Value = order.LaserCost;
-                ws.Cell(row, 8).Value = order.BendingCost;
-                ws.Cell(row, 9).Value = order.WeldingCost;
-                ws.Cell(row, 10).Value = order.TotalPrice;
-                ws.Range(row, 6, row, 10).Style.NumberFormat.Format = "#,##0;-#,##0;-";
+                ws.Cell(row, 3).Value  = order.ApplicantName         ?? string.Empty;
+                ws.Cell(row, 4).Value  = order.ApplicantWorkshopName ?? string.Empty;
+                ws.Cell(row, 5).Value  = order.AcceptorName          ?? string.Empty;
+                ws.Cell(row, 6).Value  = FormatPriority(order.Priority);
+                ws.Cell(row, 7).Value  = order.Quantity;
+                ws.Cell(row, 8).Value  = order.MaterialName ?? string.Empty;
+                ws.Cell(row, 9).Value  = NormalizeOperationType(order.OperationType);
+                ws.Cell(row, 10).Value = order.MassKg;
+                ws.Cell(row, 10).Style.NumberFormat.Format = "0.##;-0.##;-";
+                // Дата выполнения (col 11) — пусто, наполняется в Этапе 4.
+                ws.Cell(row, 12).Value = order.TotalPrice;
+                ws.Cell(row, 13).Value = order.MaterialCost;
+                ws.Cell(row, 14).Value = order.LaserCost;
+                ws.Cell(row, 15).Value = order.BendingCost;
+                ws.Cell(row, 16).Value = order.WeldingCost;
+
+                // Числовой формат для денег: тире вместо нулей не загромождает глаз.
+                ws.Range(row, 12, row, 16).Style.NumberFormat.Format = "#,##0;-#,##0;-";
                 row++;
             }
 
-            // Строка «Итого» — формулы SUM по каждой стоимостной колонке (F..J).
+            // Строка «Итого» — формулы SUM по числовым колонкам.
+            // Кол-во (col 7) и Масса (col 10) тоже суммируются — полезно для отчёта.
             if (orders.Count > 0)
             {
                 int firstData = headerRow + 1;
                 int lastData = row - 1;
                 ws.Cell(row, 1).Value = "Итого";
-                for (int col = 6; col <= colCount; col++)
+
+                int[] sumCols = { 7, 10, 12, 13, 14, 15, 16 };
+                foreach (var col in sumCols)
                 {
                     var letter = ColumnLetter(col);
                     ws.Cell(row, col).FormulaA1 = $"=SUM({letter}{firstData}:{letter}{lastData})";
-                    ws.Cell(row, col).Style.NumberFormat.Format = "#,##0;-#,##0;-";
                 }
+                ws.Cell(row, 10).Style.NumberFormat.Format = "0.##;-0.##;-";
+                ws.Range(row, 12, row, 16).Style.NumberFormat.Format = "#,##0;-#,##0;-";
+
                 ws.Range(row, 1, row, colCount).Style.Font.Bold = true;
                 ws.Range(row, 1, row, colCount).Style.Border.TopBorder = XLBorderStyleValues.Thin;
             }
 
             ws.Columns().AdjustToContents();
-            ws.SheetView.FreezeRows(headerRow);
+            // Заморозка шапки + первой колонки — длинная таблица должна листаться удобно.
+            ws.SheetView.Freeze(headerRow, 1);
         }
 
-        /// <summary>Конвертация номера колонки 1..26 в букву A..Z. Для 10 нам хватит.</summary>
+        /// <summary>
+        /// Текстовое представление срочности для Excel — руководство не любит читать
+        /// числа enum'а. На неизвестное значение возвращаем «—», чтобы файл не падал.
+        /// </summary>
+        private static string FormatPriority(OrderPriority priority) => priority switch
+        {
+            OrderPriority.Low     => "Низкая",
+            OrderPriority.Normal  => "Обычная",
+            OrderPriority.High    => "Высокая",
+            OrderPriority.Urgent  => "Срочно",
+            _ => "—"
+        };
+
+        /// <summary>Конвертация номера колонки 1..26 в букву A..Z. Достаточно для 16 колонок.</summary>
         private static string ColumnLetter(int col) => ((char)('A' + col - 1)).ToString();
 
         // ======================================================================

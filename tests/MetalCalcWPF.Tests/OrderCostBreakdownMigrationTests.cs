@@ -81,7 +81,14 @@ namespace MetalCalcWPF.Tests
                     "INSERT INTO OrderHistory (CreatedDate, ClientName, Description, TotalPrice, OperationType) " +
                     "VALUES (123456789, 'Старый клиент', 'Историческая запись', 99999, 'Laser')");
 
-                MigrationRunner.Run(ctx, new IMigration[] { new V004_AddOrderCostBreakdown() });
+                // Чтобы можно было прочитать строку через EF (модель уже знает поля v6),
+                // прогоняем все миграции, которые могут добавить колонки в OrderHistory.
+                // Тест по-прежнему проверяет именно V004: legacy → 6 колонок → ALTER.
+                MigrationRunner.Run(ctx, new IMigration[]
+                {
+                    new V004_AddOrderCostBreakdown(),
+                    new V006_AddOrderApplicationFields(),
+                });
 
                 // Колонки появились.
                 var names = ctx.Database

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -59,6 +60,15 @@ namespace MetalCalcWPF.ViewModels
         // ✅ Спринт 2.2b: выбор конкретного лазерного станка
         private CuttingMachine? _selectedLaserMachine;
 
+        // ====== Поля заявки (Этап 3) ======
+        // Все три FK-выбора опциональны — например, расчёт «для прикидки» можно
+        // сделать без указания заявителя/приёмщика, заказ в БД при этом будет
+        // сохранён с null-снапшотами. Срочность по умолчанию — Normal.
+        private Person? _selectedApplicant;
+        private Workshop? _selectedApplicantWorkshop;
+        private Person? _selectedAcceptor;
+        private OrderPriority _selectedPriority = OrderPriority.Normal;
+
         public MainViewModel(
             IDatabaseService databaseService,
             IWindowService windowService,
@@ -84,6 +94,16 @@ namespace MetalCalcWPF.ViewModels
                 _databaseService.GetCuttingMachinesByKind(CuttingMachineKind.Laser)
                                 .Where(m => m.IsActive));
             SelectedLaserMachine = LaserMachines.FirstOrDefault();
+
+            // ✅ Этап 3: справочники для блока «Заявка». Загружаем один раз на старте —
+            // если пользователь правит справочник, ему нужно перезапустить приложение
+            // (то же поведение, что у материалов и лазеров).
+            var allPersons = _databaseService.GetAllPersons().Where(p => p.IsActive).ToList();
+            ApplicantOptions = new ObservableCollection<Person>(allPersons.Where(p => p.CanSubmit));
+            AcceptorOptions  = new ObservableCollection<Person>(allPersons.Where(p => p.CanAccept));
+            ApplicantWorkshopOptions = new ObservableCollection<Workshop>(
+                _databaseService.GetAllWorkshops().Where(w => w.IsActive));
+            AllPriorities = Enum.GetValues<OrderPriority>().ToList();
 
             // ✅ Загружаем только активные профили проката
             RolledProfiles = new ObservableCollection<RolledProfile>(
@@ -192,6 +212,56 @@ namespace MetalCalcWPF.ViewModels
         {
             get => _selectedLaserMachine;
             set => SetProperty(ref _selectedLaserMachine, value);
+        }
+
+        // ====== Свойства блока «Заявка» (Этап 3) ======
+
+        /// <summary>Заявители — активные сотрудники с галочкой CanSubmit.</summary>
+        public ObservableCollection<Person> ApplicantOptions { get; private set; } = new();
+
+        /// <summary>Цеха-заказчики — активные записи Workshop (наши + внешние клиенты).</summary>
+        public ObservableCollection<Workshop> ApplicantWorkshopOptions { get; private set; } = new();
+
+        /// <summary>Приёмщики — активные сотрудники с галочкой CanAccept (мастера / бригадиры / ПТО).</summary>
+        public ObservableCollection<Person> AcceptorOptions { get; private set; } = new();
+
+        /// <summary>Уровни срочности для ComboBox.</summary>
+        public List<OrderPriority> AllPriorities { get; private set; } = new();
+
+        public Person? SelectedApplicant
+        {
+            get => _selectedApplicant;
+            set
+            {
+                if (SetProperty(ref _selectedApplicant, value))
+                {
+                    // Удобство: если у заявителя задан цех, подставим его автоматически.
+                    // Пользователь сможет переопределить вручную.
+                    if (value?.WorkshopId is int wid)
+                    {
+                        var ws = ApplicantWorkshopOptions.FirstOrDefault(w => w.Id == wid);
+                        if (ws != null) SelectedApplicantWorkshop = ws;
+                    }
+                }
+            }
+        }
+
+        public Workshop? SelectedApplicantWorkshop
+        {
+            get => _selectedApplicantWorkshop;
+            set => SetProperty(ref _selectedApplicantWorkshop, value);
+        }
+
+        public Person? SelectedAcceptor
+        {
+            get => _selectedAcceptor;
+            set => SetProperty(ref _selectedAcceptor, value);
+        }
+
+        public OrderPriority SelectedPriority
+        {
+            get => _selectedPriority;
+            set => SetProperty(ref _selectedPriority, value);
         }
 
         /// <summary>
@@ -546,6 +616,16 @@ namespace MetalCalcWPF.ViewModels
                         LaserCost = Math.Round(result.LaserCost),
                         BendingCost = Math.Round(result.BendingCost),
                         WeldingCost = Math.Round(result.WeldingCost),
+
+                        // Поля заявки (Этап 3). Снапшоты строк, чтобы отчёт за прошлый
+                        // период не «портился» при правке справочников.
+                        Priority = SelectedPriority,
+                        Quantity = quantity,
+                        MassKg = Math.Round(weightKg, 2),
+                        ApplicantName         = SelectedApplicant?.FullName,
+                        ApplicantWorkshopName = SelectedApplicantWorkshop?.Name,
+                        AcceptorName          = SelectedAcceptor?.FullName,
+                        MaterialName          = SelectedMaterial?.Name,
                     };
 
                     _databaseService.SaveOrder(newOrder);

@@ -69,6 +69,41 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                    <!-- ✅ Этап 3: блок «Заявка» — справочные поля workflow заказов.
+                         Свёрнут по умолчанию: для быстрых прикидок «сколько примерно стоит»
+                         можно ничего не выбирать, поля сохранятся как NULL и заказ всё равно
+                         попадёт в историю. Раскрыть, если оформляется реальная заявка. -->
+                    <Expander Header="📋 Заявка (заявитель, цех, приёмщик, срочность)"
+                              IsExpanded="True" Margin="0,0,0,10">
+                        <StackPanel Margin="5,5,0,0">
+                            <TextBlock Text="Заявитель:" FontWeight="Bold" Margin="0,5,0,0"/>
+                            <ComboBox Height="25" Margin="0,3,0,5"
+                                      ItemsSource="{Binding ApplicantOptions}"
+                                      SelectedItem="{Binding SelectedApplicant}"
+                                      DisplayMemberPath="FullName"
+                                      ToolTip="Кто подал заявку (фильтр: CanSubmit=true)"/>
+
+                            <TextBlock Text="Цех заявителя:" FontWeight="Bold" Margin="0,5,0,0"/>
+                            <ComboBox Height="25" Margin="0,3,0,5"
+                                      ItemsSource="{Binding ApplicantWorkshopOptions}"
+                                      SelectedItem="{Binding SelectedApplicantWorkshop}"
+                                      DisplayMemberPath="Name"
+                                      ToolTip="Подставится автоматически по выбранному заявителю"/>
+
+                            <TextBlock Text="Принявший заказ:" FontWeight="Bold" Margin="0,5,0,0"/>
+                            <ComboBox Height="25" Margin="0,3,0,5"
+                                      ItemsSource="{Binding AcceptorOptions}"
+                                      SelectedItem="{Binding SelectedAcceptor}"
+                                      DisplayMemberPath="FullName"
+                                      ToolTip="Мастер / бригадир / инженер ПТО (фильтр: CanAccept=true)"/>
+
+                            <TextBlock Text="Срочность:" FontWeight="Bold" Margin="0,5,0,0"/>
+                            <ComboBox Height="25" Margin="0,3,0,0"
+                                      ItemsSource="{Binding AllPriorities}"
+                                      SelectedItem="{Binding SelectedPriority}"/>
+                        </StackPanel>
+                    </Expander>
+
                     <TextBlock Text="Клиент / Название заказа:" FontWeight="Bold"/>
                     <TextBox Height="25" Margin="0,5,0,5" Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"/>
 

@@ -150,6 +150,69 @@ namespace MetalCalcWPF.Tests
         }
 
         [TestMethod]
+        public void ExportToExcel_OrdersSheet_ContainsApplicationFieldsHeaders()
+        {
+            // Проверяем, что новые колонки заявки (Этап 3) попадают в Excel:
+            // Заявитель, Цех заявителя, Принявший, Срочность, Кол-во, Материал, Масса.
+            var svc = new ReportingService();
+            var orders = new List<OrderHistory>
+            {
+                new OrderHistory
+                {
+                    CreatedDate = new DateTime(2025, 4, 5),
+                    ClientName = "К",
+                    Description = "x",
+                    OperationType = "Металл",
+                    TotalPrice = 250_000m,
+                    Priority = OrderPriority.Urgent,
+                    Quantity = 12,
+                    MassKg = 47.3,
+                    ApplicantName = "Иванов И.И.",
+                    ApplicantWorkshopName = "Цех СВ",
+                    AcceptorName = "Петров П.П.",
+                    MaterialName = "Сталь Ст3",
+                },
+            };
+            var summary = svc.BuildSummary(orders, Apr01, May01);
+            var path = Path.Combine(Path.GetTempPath(), $"report_{Guid.NewGuid():N}.xlsx");
+            try
+            {
+                svc.ExportToExcel(orders, summary, path);
+
+                using var wb = new XLWorkbook(path);
+                var ws = wb.Worksheet("Заказы");
+
+                // Шапка таблицы — на строке 3.
+                var headers = Enumerable.Range(1, 16)
+                    .Select(c => ws.Cell(3, c).GetString())
+                    .ToList();
+
+                CollectionAssert.Contains(headers, "Заявитель");
+                CollectionAssert.Contains(headers, "Цех заявителя");
+                CollectionAssert.Contains(headers, "Принявший");
+                CollectionAssert.Contains(headers, "Срочность");
+                CollectionAssert.Contains(headers, "Кол-во");
+                CollectionAssert.Contains(headers, "Материал");
+                CollectionAssert.Contains(headers, "Масса (кг)");
+                CollectionAssert.Contains(headers, "Дата выполнения");
+
+                // Данные заказа в строке 4.
+                Assert.AreEqual("Иванов И.И.", ws.Cell(4, 3).GetString());
+                Assert.AreEqual("Цех СВ", ws.Cell(4, 4).GetString());
+                Assert.AreEqual("Петров П.П.", ws.Cell(4, 5).GetString());
+                Assert.AreEqual("Срочно", ws.Cell(4, 6).GetString(),
+                    "OrderPriority.Urgent должен показываться текстом 'Срочно'");
+                Assert.AreEqual(12, (int)ws.Cell(4, 7).GetDouble());
+                Assert.AreEqual("Сталь Ст3", ws.Cell(4, 8).GetString());
+                Assert.AreEqual(47.3, ws.Cell(4, 10).GetDouble(), 0.01);
+            }
+            finally
+            {
+                try { if (File.Exists(path)) File.Delete(path); } catch { /* best-effort */ }
+            }
+        }
+
+        [TestMethod]
         public void ExportToExcel_WritesBothSheetsWithKeyCells()
         {
             var svc = new ReportingService();
