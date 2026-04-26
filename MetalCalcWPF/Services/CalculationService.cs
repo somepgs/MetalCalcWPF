@@ -26,6 +26,14 @@ namespace MetalCalcWPF.Services
 
         public decimal TotalPrice => MaterialCost + LaserCost + BendingCost + WeldingCost;
 
+        /// <summary>
+        /// Расчётная масса всей партии (кг). Считается в <see cref="MaterialCostCalculator"/>
+        /// либо как (Ш × В × Т × ρ × кол-во) / 10⁶, либо берётся из заданной массы партии.
+        /// 0 — если ни габариты, ни масса не были введены (заказ только из лазерной резки
+        /// без листового материала, например).
+        /// </summary>
+        public double MassKg { get; set; }
+
         public string Log { get; set; } = string.Empty;
         public string LaserDetails { get; set; } = string.Empty;
         public string WeldingDetails { get; set; } = string.Empty;

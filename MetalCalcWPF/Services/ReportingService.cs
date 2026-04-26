@@ -199,7 +199,9 @@ namespace MetalCalcWPF.Services
         {
             var ws = workbook.Worksheets.Add("Заказы");
 
-            const int colCount = 16;
+            // Колонки 1..13 — управленческие (полный список руководства);
+            // 14..17 — детализация cost-разбивки для бухгалтерии.
+            const int colCount = 17;
 
             ws.Cell(1, 1).Value = $"Заказы за период: {FormatPeriod(summary.PeriodStart, summary.PeriodEnd)}";
             ws.Range(1, 1, 1, colCount).Merge();
@@ -216,14 +218,15 @@ namespace MetalCalcWPF.Services
             ws.Cell(headerRow, 6).Value  = "Срочность";
             ws.Cell(headerRow, 7).Value  = "Кол-во";
             ws.Cell(headerRow, 8).Value  = "Материал";
-            ws.Cell(headerRow, 9).Value  = "Операции";
-            ws.Cell(headerRow, 10).Value = "Масса (кг)";
-            ws.Cell(headerRow, 11).Value = "Дата выполнения";   // Этап 4 заполнит
-            ws.Cell(headerRow, 12).Value = "Сумма (₸)";
-            ws.Cell(headerRow, 13).Value = "Металл (₸)";
-            ws.Cell(headerRow, 14).Value = "Лазер (₸)";
-            ws.Cell(headerRow, 15).Value = "Гибка (₸)";
-            ws.Cell(headerRow, 16).Value = "Сварка (₸)";
+            ws.Cell(headerRow, 9).Value  = "Изделие";
+            ws.Cell(headerRow, 10).Value = "Операции";
+            ws.Cell(headerRow, 11).Value = "Масса (кг)";
+            ws.Cell(headerRow, 12).Value = "Дата выполнения";   // Этап 4 заполнит
+            ws.Cell(headerRow, 13).Value = "Сумма (₸)";
+            ws.Cell(headerRow, 14).Value = "Металл (₸)";
+            ws.Cell(headerRow, 15).Value = "Лазер (₸)";
+            ws.Cell(headerRow, 16).Value = "Гибка (₸)";
+            ws.Cell(headerRow, 17).Value = "Сварка (₸)";
 
             var headerRange = ws.Range(headerRow, 1, headerRow, colCount);
             headerRange.Style.Font.Bold = true;
@@ -244,37 +247,38 @@ namespace MetalCalcWPF.Services
                 ws.Cell(row, 6).Value  = FormatPriority(order.Priority);
                 ws.Cell(row, 7).Value  = order.Quantity;
                 ws.Cell(row, 8).Value  = order.MaterialName ?? string.Empty;
-                ws.Cell(row, 9).Value  = NormalizeOperationType(order.OperationType);
-                ws.Cell(row, 10).Value = order.MassKg;
-                ws.Cell(row, 10).Style.NumberFormat.Format = "0.##;-0.##;-";
-                // Дата выполнения (col 11) — пусто, наполняется в Этапе 4.
-                ws.Cell(row, 12).Value = order.TotalPrice;
-                ws.Cell(row, 13).Value = order.MaterialCost;
-                ws.Cell(row, 14).Value = order.LaserCost;
-                ws.Cell(row, 15).Value = order.BendingCost;
-                ws.Cell(row, 16).Value = order.WeldingCost;
+                ws.Cell(row, 9).Value  = order.ClientName ?? string.Empty;   // Изделие
+                ws.Cell(row, 10).Value = FormatOperations(order);
+                ws.Cell(row, 11).Value = order.MassKg;
+                ws.Cell(row, 11).Style.NumberFormat.Format = "0.##;-0.##;-";
+                // Дата выполнения (col 12) — пусто, наполняется в Этапе 4.
+                ws.Cell(row, 13).Value = order.TotalPrice;
+                ws.Cell(row, 14).Value = order.MaterialCost;
+                ws.Cell(row, 15).Value = order.LaserCost;
+                ws.Cell(row, 16).Value = order.BendingCost;
+                ws.Cell(row, 17).Value = order.WeldingCost;
 
                 // Числовой формат для денег: тире вместо нулей не загромождает глаз.
-                ws.Range(row, 12, row, 16).Style.NumberFormat.Format = "#,##0;-#,##0;-";
+                ws.Range(row, 13, row, 17).Style.NumberFormat.Format = "#,##0;-#,##0;-";
                 row++;
             }
 
             // Строка «Итого» — формулы SUM по числовым колонкам.
-            // Кол-во (col 7) и Масса (col 10) тоже суммируются — полезно для отчёта.
+            // Кол-во (7) и Масса (11) тоже суммируются — полезно для отчёта.
             if (orders.Count > 0)
             {
                 int firstData = headerRow + 1;
                 int lastData = row - 1;
                 ws.Cell(row, 1).Value = "Итого";
 
-                int[] sumCols = { 7, 10, 12, 13, 14, 15, 16 };
+                int[] sumCols = { 7, 11, 13, 14, 15, 16, 17 };
                 foreach (var col in sumCols)
                 {
                     var letter = ColumnLetter(col);
                     ws.Cell(row, col).FormulaA1 = $"=SUM({letter}{firstData}:{letter}{lastData})";
                 }
-                ws.Cell(row, 10).Style.NumberFormat.Format = "0.##;-0.##;-";
-                ws.Range(row, 12, row, 16).Style.NumberFormat.Format = "#,##0;-#,##0;-";
+                ws.Cell(row, 11).Style.NumberFormat.Format = "0.##;-0.##;-";
+                ws.Range(row, 13, row, 17).Style.NumberFormat.Format = "#,##0;-#,##0;-";
 
                 ws.Range(row, 1, row, colCount).Style.Font.Bold = true;
                 ws.Range(row, 1, row, colCount).Style.Border.TopBorder = XLBorderStyleValues.Thin;
@@ -283,6 +287,27 @@ namespace MetalCalcWPF.Services
             ws.Columns().AdjustToContents();
             // Заморозка шапки + первой колонки — длинная таблица должна листаться удобно.
             ws.SheetView.Freeze(headerRow, 1);
+        }
+
+        /// <summary>
+        /// Список выполненных операций, склеенный через «+»: «Металл+Лазер»,
+        /// «Лазер+Гибка+Сварка» и т.п. Берётся из cost-полей — что не равно нулю,
+        /// то и было реально сделано.
+        /// <para>Fallback на лог калькулятора нужен для исторических заказов до v4,
+        /// где cost-поля все нулевые: тогда хотя бы видно «Металл(...) + Лазер(...)»
+        /// в исходном виде.</para>
+        /// </summary>
+        private static string FormatOperations(OrderHistory order)
+        {
+            var ops = new List<string>(4);
+            if (order.MaterialCost > 0) ops.Add("Металл");
+            if (order.LaserCost > 0)    ops.Add("Лазер");
+            if (order.BendingCost > 0)  ops.Add("Гибка");
+            if (order.WeldingCost > 0)  ops.Add("Сварка");
+
+            return ops.Count > 0
+                ? string.Join("+", ops)
+                : NormalizeOperationType(order.OperationType);
         }
 
         /// <summary>
