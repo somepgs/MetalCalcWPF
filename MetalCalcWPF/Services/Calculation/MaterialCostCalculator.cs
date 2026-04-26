@@ -47,6 +47,10 @@ namespace MetalCalcWPF.Services.Calculation
             decimal sellPricePerKg = costPricePerKg * (1 + settings.MaterialMarkupPercent / 100m);
 
             result.MaterialCost = (decimal)totalWeightKg * sellPricePerKg;
+            // Сохраняем массу партии для отчётности (Этап 3): отчёт руководству
+            // показывает «Масса (кг)», и если её не сохранить здесь — поле останется
+            // нулевым для всех заказов, где пользователь не вводил массу руками.
+            result.MassKg = totalWeightKg;
 
             // Прозрачная детализация: откуда взялась масса, какая наценка на материал.
             var breakdown = new CalculationBreakdown

@@ -103,7 +103,17 @@ namespace MetalCalcWPF.ViewModels
             AcceptorOptions  = new ObservableCollection<Person>(allPersons.Where(p => p.CanAccept));
             ApplicantWorkshopOptions = new ObservableCollection<Workshop>(
                 _databaseService.GetAllWorkshops().Where(w => w.IsActive));
-            AllPriorities = Enum.GetValues<OrderPriority>().ToList();
+
+            // ComboBox срочности должен показывать русские названия, а не enum-имена
+            // («Низкая» вместо «Low»). Используем pairs {Value, Label} с биндингом
+            // через SelectedValuePath="Value" / DisplayMemberPath="Label".
+            AllPriorities = new List<PriorityChoice>
+            {
+                new(OrderPriority.Low,    "Низкая"),
+                new(OrderPriority.Normal, "Обычная"),
+                new(OrderPriority.High,   "Высокая"),
+                new(OrderPriority.Urgent, "Срочно"),
+            };
 
             // ✅ Загружаем только активные профили проката
             RolledProfiles = new ObservableCollection<RolledProfile>(
@@ -225,8 +235,8 @@ namespace MetalCalcWPF.ViewModels
         /// <summary>Приёмщики — активные сотрудники с галочкой CanAccept (мастера / бригадиры / ПТО).</summary>
         public ObservableCollection<Person> AcceptorOptions { get; private set; } = new();
 
-        /// <summary>Уровни срочности для ComboBox.</summary>
-        public List<OrderPriority> AllPriorities { get; private set; } = new();
+        /// <summary>Уровни срочности для ComboBox с русскими ярлыками.</summary>
+        public List<PriorityChoice> AllPriorities { get; private set; } = new();
 
         public Person? SelectedApplicant
         {
@@ -621,7 +631,9 @@ namespace MetalCalcWPF.ViewModels
                         // период не «портился» при правке справочников.
                         Priority = SelectedPriority,
                         Quantity = quantity,
-                        MassKg = Math.Round(weightKg, 2),
+                        // Масса: предпочитаем результат калькулятора (он считает из габаритов
+                        // или измеренной массы), fallback — то, что ввёл пользователь.
+                        MassKg = Math.Round(result.MassKg > 0 ? result.MassKg : weightKg, 2),
                         ApplicantName         = SelectedApplicant?.FullName,
                         ApplicantWorkshopName = SelectedApplicantWorkshop?.Name,
                         AcceptorName          = SelectedAcceptor?.FullName,

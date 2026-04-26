@@ -182,8 +182,8 @@ namespace MetalCalcWPF.Tests
                 using var wb = new XLWorkbook(path);
                 var ws = wb.Worksheet("Заказы");
 
-                // Шапка таблицы — на строке 3.
-                var headers = Enumerable.Range(1, 16)
+                // Шапка таблицы — на строке 3, 17 колонок.
+                var headers = Enumerable.Range(1, 17)
                     .Select(c => ws.Cell(3, c).GetString())
                     .ToList();
 
@@ -193,6 +193,8 @@ namespace MetalCalcWPF.Tests
                 CollectionAssert.Contains(headers, "Срочность");
                 CollectionAssert.Contains(headers, "Кол-во");
                 CollectionAssert.Contains(headers, "Материал");
+                CollectionAssert.Contains(headers, "Изделие");
+                CollectionAssert.Contains(headers, "Операции");
                 CollectionAssert.Contains(headers, "Масса (кг)");
                 CollectionAssert.Contains(headers, "Дата выполнения");
 
@@ -204,7 +206,8 @@ namespace MetalCalcWPF.Tests
                     "OrderPriority.Urgent должен показываться текстом 'Срочно'");
                 Assert.AreEqual(12, (int)ws.Cell(4, 7).GetDouble());
                 Assert.AreEqual("Сталь Ст3", ws.Cell(4, 8).GetString());
-                Assert.AreEqual(47.3, ws.Cell(4, 10).GetDouble(), 0.01);
+                Assert.AreEqual("К", ws.Cell(4, 9).GetString(), "Изделие = ClientName заказа");
+                Assert.AreEqual(47.3, ws.Cell(4, 11).GetDouble(), 0.01);
             }
             finally
             {
@@ -249,6 +252,59 @@ namespace MetalCalcWPF.Tests
                 Assert.IsTrue(
                     zakazy.Cell(1, 1).GetString().Contains("Заказы за период"),
                     "Шапка листа 'Заказы' должна содержать период");
+            }
+            finally
+            {
+                try { if (File.Exists(path)) File.Delete(path); } catch { /* best-effort */ }
+            }
+        }
+
+        [TestMethod]
+        public void ExportToExcel_OperationsColumn_JoinsCostFieldsWithPlus()
+        {
+            // По фидбеку пользователя: «нужно операции скомпоновать в одну колонку
+            // (Лазер+Сварка, или Лазер+Гибка+Сварка, и т.д.)». Колонка «Операции»
+            // строится из cost-полей, отбрасывая нулевые.
+            var svc = new ReportingService();
+            var orders = new List<OrderHistory>
+            {
+                new OrderHistory  // Только лазер + металл.
+                {
+                    CreatedDate = new DateTime(2025, 4, 5),
+                    ClientName = "A", Description = "x",
+                    OperationType = "Металл + Лазер",
+                    TotalPrice = 100m, MaterialCost = 60m, LaserCost = 40m,
+                },
+                new OrderHistory  // Все четыре операции.
+                {
+                    CreatedDate = new DateTime(2025, 4, 6),
+                    ClientName = "B", Description = "y",
+                    OperationType = "—",
+                    TotalPrice = 200m,
+                    MaterialCost = 50m, LaserCost = 60m, BendingCost = 40m, WeldingCost = 50m,
+                },
+                new OrderHistory  // Историческая запись без cost-разбивки.
+                {
+                    CreatedDate = new DateTime(2025, 4, 7),
+                    ClientName = "C", Description = "z",
+                    OperationType = "Старый формат лога",
+                    TotalPrice = 300m,
+                },
+            };
+            var summary = svc.BuildSummary(orders, Apr01, May01);
+            var path = Path.Combine(Path.GetTempPath(), $"report_{Guid.NewGuid():N}.xlsx");
+            try
+            {
+                svc.ExportToExcel(orders, summary, path);
+
+                using var wb = new XLWorkbook(path);
+                var ws = wb.Worksheet("Заказы");
+
+                // Колонка 10 — Операции. ExportToExcel пишет в порядке списка as-is.
+                Assert.AreEqual("Металл+Лазер", ws.Cell(4, 10).GetString());
+                Assert.AreEqual("Металл+Лазер+Гибка+Сварка", ws.Cell(5, 10).GetString());
+                Assert.AreEqual("Старый формат лога", ws.Cell(6, 10).GetString(),
+                    "Без cost-разбивки fallback на исходный лог");
             }
             finally
             {
