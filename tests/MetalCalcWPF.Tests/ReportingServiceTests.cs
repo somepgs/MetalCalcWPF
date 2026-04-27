@@ -311,5 +311,117 @@ namespace MetalCalcWPF.Tests
                 try { if (File.Exists(path)) File.Delete(path); } catch { /* best-effort */ }
             }
         }
+
+        [TestMethod]
+        public void ExportToExcel_QueueSheet_ContainsOnlyPendingOrders_SortedByPriorityThenDate()
+        {
+            // Лист «Очередь» (Этап 4): только заказы с CompletedDate=NULL,
+            // сортировка Priority desc, CreatedDate asc.
+            var svc = new ReportingService();
+            var orders = new List<OrderHistory>
+            {
+                // Эти попадут в очередь:
+                new OrderHistory
+                {
+                    Id = 10, CreatedDate = new DateTime(2025, 4, 5),
+                    ClientName = "Старый-обычный", Description = "x", OperationType = "—",
+                    TotalPrice = 1000m, Priority = OrderPriority.Normal,
+                    ApplicantName = "Иванов",
+                },
+                new OrderHistory
+                {
+                    Id = 11, CreatedDate = new DateTime(2025, 4, 10),
+                    ClientName = "Срочный", Description = "x", OperationType = "—",
+                    TotalPrice = 2000m, Priority = OrderPriority.Urgent,
+                    ApplicantName = "Петров",
+                },
+                new OrderHistory
+                {
+                    Id = 12, CreatedDate = new DateTime(2025, 4, 1),
+                    ClientName = "Новый-обычный", Description = "x", OperationType = "—",
+                    TotalPrice = 1500m, Priority = OrderPriority.Normal,
+                    ApplicantName = "Сидоров",
+                },
+                // Этот НЕ попадёт — выполнен:
+                new OrderHistory
+                {
+                    Id = 13, CreatedDate = new DateTime(2025, 4, 12),
+                    ClientName = "Готово", Description = "x", OperationType = "—",
+                    TotalPrice = 5000m, Priority = OrderPriority.High,
+                    CompletedDate = new DateTime(2025, 4, 13),
+                },
+            };
+            var summary = svc.BuildSummary(orders, Apr01, May01);
+
+            // KPI-счётчики тоже проверяем.
+            Assert.AreEqual(1, summary.CompletedCount);
+            Assert.AreEqual(3, summary.PendingCount);
+
+            var path = Path.Combine(Path.GetTempPath(), $"report_{Guid.NewGuid():N}.xlsx");
+            try
+            {
+                svc.ExportToExcel(orders, summary, path);
+                using var wb = new XLWorkbook(path);
+
+                Assert.IsTrue(wb.TryGetWorksheet("Очередь", out _),
+                    "Должен быть лист 'Очередь'");
+                var queue = wb.Worksheet("Очередь");
+
+                // Шапка таблицы — на строке 3.
+                Assert.AreEqual("Срочность", queue.Cell(3, 2).GetString());
+
+                // Строка 4 — самый срочный (Urgent), Id=11.
+                Assert.AreEqual(11d, queue.Cell(4, 1).GetDouble(),
+                    "В Очереди первая строка — Urgent заказ");
+                Assert.AreEqual("Срочно", queue.Cell(4, 2).GetString());
+
+                // Строки 5 и 6 — два Normal, отсортированных по дате asc:
+                // Id=12 (01.04) первым, Id=10 (05.04) вторым.
+                Assert.AreEqual(12d, queue.Cell(5, 1).GetDouble(),
+                    "При равной срочности раньше пришедший — выше");
+                Assert.AreEqual(10d, queue.Cell(6, 1).GetDouble());
+
+                // Выполненный заказ (Id=13) в Очереди не упоминается.
+                var allValues = queue.CellsUsed().Select(c => c.GetString()).ToList();
+                Assert.IsFalse(allValues.Any(v => v.Contains("Готово")),
+                    "Выполненный заказ не должен попадать в Очередь");
+            }
+            finally
+            {
+                try { if (File.Exists(path)) File.Delete(path); } catch { /* best-effort */ }
+            }
+        }
+
+        [TestMethod]
+        public void ExportToExcel_QueueSheet_EmptyWhenAllCompleted()
+        {
+            var svc = new ReportingService();
+            var orders = new List<OrderHistory>
+            {
+                new OrderHistory
+                {
+                    Id = 1, CreatedDate = new DateTime(2025, 4, 5),
+                    ClientName = "K", Description = "x", OperationType = "—",
+                    TotalPrice = 1000m, Priority = OrderPriority.Normal,
+                    CompletedDate = new DateTime(2025, 4, 6),
+                },
+            };
+            var summary = svc.BuildSummary(orders, Apr01, May01);
+            var path = Path.Combine(Path.GetTempPath(), $"report_{Guid.NewGuid():N}.xlsx");
+            try
+            {
+                svc.ExportToExcel(orders, summary, path);
+                using var wb = new XLWorkbook(path);
+                var queue = wb.Worksheet("Очередь");
+
+                // На пустой очереди — мажорный месседж в A3, без таблицы.
+                Assert.IsTrue(queue.Cell(3, 1).GetString().Contains("пустая"),
+                    "Пустая очередь должна сообщать «всё выполнено»");
+            }
+            finally
+            {
+                try { if (File.Exists(path)) File.Delete(path); } catch { /* best-effort */ }
+            }
+        }
     }
 }

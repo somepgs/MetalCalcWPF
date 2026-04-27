@@ -138,6 +138,7 @@ namespace MetalCalcWPF.ViewModels
             ClearRolledSearchCommand = new RelayCommand(_ => RolledSearchText = string.Empty);
             DeleteOrderCommand = new RelayCommand(_ => DeleteSelectedOrder(), _ => SelectedHistory != null);
             DeleteOrderByParamCommand = new RelayCommand(p => DeleteOrderByParam(p));
+            ToggleCompletedCommand = new RelayCommand(p => ToggleCompletedByParam(p));
             ExportToExcelCommand = new RelayCommand(_ => ExportToExcel());
             OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
             OpenDatabaseCommand = new RelayCommand(_ => OpenDatabaseEditor());
@@ -441,6 +442,13 @@ namespace MetalCalcWPF.ViewModels
         public RelayCommand ClearRolledSearchCommand { get; }
         public RelayCommand DeleteOrderCommand { get; }
         public RelayCommand DeleteOrderByParamCommand { get; }
+
+        /// <summary>
+        /// Переключает статус «выполнен» у заказа из контекстного меню истории.
+        /// Один пункт меню вместо двух: команда сама смотрит на CompletedDate
+        /// и либо ставит её в DateTime.Now, либо возвращает в null.
+        /// </summary>
+        public RelayCommand ToggleCompletedCommand { get; }
         public RelayCommand ExportToExcelCommand { get; }
         public RelayCommand OpenSettingsCommand { get; }
         public RelayCommand OpenDatabaseCommand { get; }
@@ -675,6 +683,25 @@ namespace MetalCalcWPF.ViewModels
                     _messageService.ShowInfo("Заказ удален");
                 }
             }
+        }
+
+        /// <summary>
+        /// Переключает статус выполнения заказа.
+        /// Конфирм-диалог не нужен — действие обратимое (нажал ещё раз — сняли).
+        /// </summary>
+        private void ToggleCompletedByParam(object? parameter)
+        {
+            if (parameter is not OrderHistory order) return;
+
+            if (order.CompletedDate == null)
+            {
+                _databaseService.MarkOrderCompleted(order.Id);
+            }
+            else
+            {
+                _databaseService.MarkOrderPending(order.Id);
+            }
+            ReloadHistory();
         }
 
         /// <summary>

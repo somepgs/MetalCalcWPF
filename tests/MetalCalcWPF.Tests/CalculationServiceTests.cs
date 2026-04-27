@@ -35,6 +35,8 @@ namespace MetalCalcWPF.Tests
             public WeldingProfile? GetWeldingProfile(double thickness) => null;
             public void SaveOrder(OrderHistory order) { }
             public void DeleteOrder(int id) { }
+            public void MarkOrderCompleted(int id) { }
+            public void MarkOrderPending(int id) { }
             public List<OrderHistory> GetRecentOrders() => new List<OrderHistory>();
             public List<OrderHistory> GetOrdersByDateRange(DateTime startInclusive, DateTime endExclusive) => new List<OrderHistory>();
             public List<MaterialType> GetMaterials() => new List<MaterialType>();

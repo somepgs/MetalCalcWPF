@@ -40,7 +40,8 @@ namespace MetalCalcWPF.Infrastructure.Migrations
             new V005_AddWorkshopAndPerson(),
             new V006_AddOrderApplicationFields(),
             new V007_CleanupSeedNotes(),
-            // new V008_Xxx(),
+            new V008_AddOrderCompletedDate(),
+            // new V009_Xxx(),
         };
 
         /// <summary>

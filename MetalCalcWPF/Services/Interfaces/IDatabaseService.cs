@@ -17,6 +17,12 @@ namespace MetalCalcWPF.Services.Interfaces
         void DeleteOrder(int id);
         List<OrderHistory> GetRecentOrders();
 
+        /// <summary>Помечает заказ выполненным: <c>CompletedDate = DateTime.Now</c>.</summary>
+        void MarkOrderCompleted(int id);
+
+        /// <summary>Снимает отметку выполнения (заказ возвращается в очередь).</summary>
+        void MarkOrderPending(int id);
+
         /// <summary>
         /// Возвращает заказы в заданном диапазоне дат для отчётности руководству.
         /// Полуоткрытый интервал <c>[startInclusive; endExclusive)</c> — так легко

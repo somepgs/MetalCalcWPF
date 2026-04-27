@@ -173,7 +173,8 @@ CREATE TABLE IF NOT EXISTS ""OrderHistory"" (
     ""ApplicantName"" varchar,
     ""ApplicantWorkshopName"" varchar,
     ""AcceptorName"" varchar,
-    ""MaterialName"" varchar
+    ""MaterialName"" varchar,
+    ""CompletedDate"" bigint
 )";
 
         // Workshop / Person — справочники для workflow заказов (миграция v5).

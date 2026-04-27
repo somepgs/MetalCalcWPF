@@ -60,5 +60,15 @@ namespace MetalCalcWPF.Models
 
         /// <summary>Марка материала (снапшот из <see cref="MaterialType.Name"/>).</summary>
         public string? MaterialName { get; set; }
+
+        // ====== Workflow выполнения (миграция v8, Этап 4) ======
+
+        /// <summary>
+        /// Дата фактического выполнения заказа. NULL = заказ ещё в работе или в очереди.
+        /// Заполняется одной кнопкой «Отметить как выполнен» из контекстного меню истории.
+        /// <para>Заказы с NULL попадают в лист «Очередь» Excel-отчёта, отсортированные
+        /// по срочности (Priority desc, CreatedDate asc).</para>
+        /// </summary>
+        public DateTime? CompletedDate { get; set; }
     }
 }
