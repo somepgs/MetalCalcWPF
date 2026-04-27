@@ -35,6 +35,10 @@ namespace MetalCalcWPF.Services
                 ? summary.TotalRevenue / orders.Count
                 : 0m;
 
+            // Workflow-статистика (Этап 4).
+            summary.CompletedCount = orders.Count(o => o.CompletedDate != null);
+            summary.PendingCount   = orders.Count - summary.CompletedCount;
+
             // Разбивка по 4 cost-колонкам (миграция v4) — теперь источник правды для
             // «на чём цех заработал» это поля MaterialCost/LaserCost/BendingCost/WeldingCost
             // в OrderHistory, а не строковый OperationType. Доля считается от TotalRevenue,
@@ -85,6 +89,7 @@ namespace MetalCalcWPF.Services
             using var workbook = new XLWorkbook();
 
             WriteSummarySheet(workbook, summary);
+            WriteQueueSheet(workbook, orders);
             WriteOrdersSheet(workbook, orders, summary);
 
             workbook.SaveAs(filePath);
@@ -136,8 +141,15 @@ namespace MetalCalcWPF.Services
             ws.Cell(kpiRow + 3, 2).Value = summary.AverageOrderValue;
             ws.Cell(kpiRow + 3, 2).Style.NumberFormat.Format = "#,##0";
 
-            // Разбивка по операциям.
-            var opStartRow = kpiRow + 5;
+            // Workflow-счётчики.
+            ws.Cell(kpiRow + 4, 1).Value = "Выполнено";
+            ws.Cell(kpiRow + 4, 2).Value = summary.CompletedCount;
+
+            ws.Cell(kpiRow + 5, 1).Value = "В работе / в очереди";
+            ws.Cell(kpiRow + 5, 2).Value = summary.PendingCount;
+
+            // Разбивка по операциям — сдвинута на 2 строки вниз под workflow-блок.
+            var opStartRow = kpiRow + 7;
             ws.Cell(opStartRow, 1).Value = "Разбивка по типам операций";
             ws.Cell(opStartRow, 1).Style.Font.Bold = true;
             ws.Cell(opStartRow, 1).Style.Fill.BackgroundColor = XLColor.LightGray;
@@ -251,7 +263,12 @@ namespace MetalCalcWPF.Services
                 ws.Cell(row, 10).Value = FormatOperations(order);
                 ws.Cell(row, 11).Value = order.MassKg;
                 ws.Cell(row, 11).Style.NumberFormat.Format = "0.##;-0.##;-";
-                // Дата выполнения (col 12) — пусто, наполняется в Этапе 4.
+                // Дата выполнения: для невыполненных заказов оставляем пусто (NULL → empty).
+                if (order.CompletedDate.HasValue)
+                {
+                    ws.Cell(row, 12).Value = order.CompletedDate.Value;
+                    ws.Cell(row, 12).Style.DateFormat.Format = "dd.MM.yyyy HH:mm";
+                }
                 ws.Cell(row, 13).Value = order.TotalPrice;
                 ws.Cell(row, 14).Value = order.MaterialCost;
                 ws.Cell(row, 15).Value = order.LaserCost;
@@ -287,6 +304,86 @@ namespace MetalCalcWPF.Services
             ws.Columns().AdjustToContents();
             // Заморозка шапки + первой колонки — длинная таблица должна листаться удобно.
             ws.SheetView.Freeze(headerRow, 1);
+        }
+
+        /// <summary>
+        /// Лист «Очередь» — заказы, которые ещё не отмечены как выполненные.
+        /// Сортировка: <c>Priority desc, CreatedDate asc</c> — самое срочное сверху,
+        /// при равной срочности раньше пришедшая заявка обрабатывается первой.
+        ///
+        /// <para>Если очередь пустая (всё выполнено) — пишем мажорный месседж
+        /// в одной ячейке, сам лист всё равно создаётся для постоянства структуры
+        /// файла отчёта.</para>
+        /// </summary>
+        private static void WriteQueueSheet(XLWorkbook workbook, IReadOnlyList<OrderHistory> orders)
+        {
+            var ws = workbook.Worksheets.Add("Очередь");
+
+            var pending = orders
+                .Where(o => o.CompletedDate == null)
+                .OrderByDescending(o => o.Priority)
+                .ThenBy(o => o.CreatedDate)
+                .ToList();
+
+            ws.Cell(1, 1).Value = $"Очередь заказов на {DateTime.Now:dd.MM.yyyy HH:mm}";
+            ws.Range(1, 1, 1, 8).Merge();
+            ws.Cell(1, 1).Style.Font.Bold = true;
+            ws.Cell(1, 1).Style.Font.FontSize = 12;
+
+            if (pending.Count == 0)
+            {
+                ws.Cell(3, 1).Value = "🎉 Очередь пустая — все заказы выполнены.";
+                ws.Cell(3, 1).Style.Font.Italic = true;
+                ws.Columns().AdjustToContents();
+                return;
+            }
+
+            const int headerRow = 3;
+            ws.Cell(headerRow, 1).Value = "№";
+            ws.Cell(headerRow, 2).Value = "Срочность";
+            ws.Cell(headerRow, 3).Value = "Дата поступления";
+            ws.Cell(headerRow, 4).Value = "Заявитель";
+            ws.Cell(headerRow, 5).Value = "Цех заявителя";
+            ws.Cell(headerRow, 6).Value = "Изделие";
+            ws.Cell(headerRow, 7).Value = "Операции";
+            ws.Cell(headerRow, 8).Value = "Сумма (₸)";
+
+            var headerRange = ws.Range(headerRow, 1, headerRow, 8);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            headerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+
+            int row = headerRow + 1;
+            foreach (var order in pending)
+            {
+                ws.Cell(row, 1).Value = order.Id;
+                ws.Cell(row, 2).Value = FormatPriority(order.Priority);
+                ws.Cell(row, 3).Value = order.CreatedDate;
+                ws.Cell(row, 3).Style.DateFormat.Format = "dd.MM.yyyy HH:mm";
+                ws.Cell(row, 4).Value = order.ApplicantName ?? string.Empty;
+                ws.Cell(row, 5).Value = order.ApplicantWorkshopName ?? string.Empty;
+                ws.Cell(row, 6).Value = order.ClientName ?? string.Empty;
+                ws.Cell(row, 7).Value = FormatOperations(order);
+                ws.Cell(row, 8).Value = order.TotalPrice;
+                ws.Cell(row, 8).Style.NumberFormat.Format = "#,##0;-#,##0;-";
+
+                // Подсветка срочности — Срочно красным, Высокая жёлтым.
+                // Цех видит срочные строки сразу при открытии листа.
+                if (order.Priority == OrderPriority.Urgent)
+                {
+                    ws.Range(row, 1, row, 8).Style.Fill.BackgroundColor = XLColor.LightPink;
+                    ws.Cell(row, 2).Style.Font.Bold = true;
+                }
+                else if (order.Priority == OrderPriority.High)
+                {
+                    ws.Range(row, 1, row, 8).Style.Fill.BackgroundColor = XLColor.LightYellow;
+                }
+
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+            ws.SheetView.FreezeRows(headerRow);
         }
 
         /// <summary>

@@ -552,6 +552,24 @@ namespace MetalCalcWPF
                       .ToList();
         }
 
+        public void MarkOrderCompleted(int id)
+        {
+            using var ctx = CreateContext();
+            var entity = ctx.OrderHistory.Find(id);
+            if (entity == null) return;
+            entity.CompletedDate = DateTime.Now;
+            ctx.SaveChanges();
+        }
+
+        public void MarkOrderPending(int id)
+        {
+            using var ctx = CreateContext();
+            var entity = ctx.OrderHistory.Find(id);
+            if (entity == null) return;
+            entity.CompletedDate = null;
+            ctx.SaveChanges();
+        }
+
         public List<OrderHistory> GetOrdersByDateRange(DateTime startInclusive, DateTime endExclusive)
         {
             if (endExclusive <= startInclusive)

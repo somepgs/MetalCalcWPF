@@ -10,6 +10,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <infra:ProfileKindDisplayConverter x:Key="KindRu"/>
+        <infra:NullToToggleConverter x:Key="NullToggle"/>
     </Window.Resources>
 
     <Grid Margin="10">
@@ -510,13 +511,41 @@
                         <ContextMenu>
                             <!-- ContextMenu находится вне логического дерева, поэтому используем PlacementTarget.
                                  Передаём выбранный элемент как параметр -->
+                            <MenuItem Header="{Binding PlacementTarget.SelectedItem.CompletedDate,
+                                                       RelativeSource={RelativeSource AncestorType=ContextMenu},
+                                                       Converter={StaticResource NullToggle},
+                                                       ConverterParameter='✅ Отметить как выполнен|↩ Снять отметку выполнения'}"
+                                      Command="{Binding PlacementTarget.DataContext.ToggleCompletedCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <Separator/>
                             <MenuItem Header="🗑 Удалить строку"
                                       Command="{Binding PlacementTarget.DataContext.DeleteOrderByParamCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                       CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         </ContextMenu>
                     </DataGrid.ContextMenu>
+                    <!-- Стиль строки: выполненные заказы тонируются в светло-зелёный
+                         и курсивятся, чтобы взгляд цеплялся только за активные. -->
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CompletedDate, Converter={StaticResource NullToggle}, ConverterParameter='pending|done'}"
+                                             Value="done">
+                                    <Setter Property="Background" Value="#E8F5E9"/>
+                                    <Setter Property="FontStyle"  Value="Italic"/>
+                                    <Setter Property="Foreground" Value="#666"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="№" Binding="{Binding Id}" Width="30"/>
+                        <!-- Иконка-статус: ✅ выполнен / ⏳ в работе. Просто DataGridTextColumn
+                             с конвертером — не используем чекбокс, чтобы случайным кликом не менять. -->
+                        <DataGridTextColumn Header=""
+                                            Binding="{Binding CompletedDate,
+                                                              Converter={StaticResource NullToggle},
+                                                              ConverterParameter='⏳|✅'}"
+                                            Width="25"/>
                         <DataGridTextColumn Header="Дата" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM HH:mm\}}" Width="90"/>
                         <DataGridTextColumn Header="Тип" Binding="{Binding OperationType}" Width="60" FontWeight="Bold"/>
                         <DataGridTextColumn Header="Клиент" Binding="{Binding ClientName}" Width="*"/>

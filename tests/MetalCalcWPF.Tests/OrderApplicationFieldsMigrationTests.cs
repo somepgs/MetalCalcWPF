@@ -87,7 +87,13 @@ namespace MetalCalcWPF.Tests
                     "INSERT INTO OrderHistory (CreatedDate, ClientName, Description, TotalPrice, OperationType, MaterialCost) " +
                     "VALUES (123456789, 'Старый клиент', 'x', 50000, 'Лазер', 10000)");
 
-                MigrationRunner.Run(ctx, new IMigration[] { new V006_AddOrderApplicationFields() });
+                // V008 тоже прогоняем — модель уже знает CompletedDate, без него
+                // EF-чтение строки в конце теста упадёт на «no such column».
+                MigrationRunner.Run(ctx, new IMigration[]
+                {
+                    new V006_AddOrderApplicationFields(),
+                    new V008_AddOrderCompletedDate(),
+                });
 
                 // Все 7 колонок добавлены.
                 var names = ctx.Database

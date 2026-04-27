@@ -29,6 +29,12 @@ namespace MetalCalcWPF.Models.Reporting
         /// <summary>Средний чек за период (тг). 0, если <see cref="TotalOrders"/> = 0.</summary>
         public decimal AverageOrderValue { get; set; }
 
+        /// <summary>Количество выполненных заказов в периоде (CompletedDate != null).</summary>
+        public int CompletedCount { get; set; }
+
+        /// <summary>Количество заказов в очереди (CompletedDate == null).</summary>
+        public int PendingCount { get; set; }
+
         /// <summary>Разбивка по типам операций (Laser / Bending / Welding / …).</summary>
         public List<OperationBreakdown> ByOperation { get; set; } = new List<OperationBreakdown>();
     }
