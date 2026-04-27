@@ -31,7 +31,12 @@ namespace MetalCalcWPF.ViewModels
 
             // --- ✅ ЦЕХА И КЛИЕНТЫ (миграция v5) ---
             Workshops = new ObservableCollection<Workshop>(_databaseService.GetAllWorkshops());
-            AllWorkshopKinds = Enum.GetValues<WorkshopKind>().ToList();
+            // Русские ярлыки для колонки «Тип» в гриде — иначе видно «Internal»/«ExternalClient».
+            AllWorkshopKindChoices = new List<WorkshopKindChoice>
+            {
+                new(WorkshopKind.Internal,       "Цех (внутренний)"),
+                new(WorkshopKind.ExternalClient, "Внешний клиент"),
+            };
 
             // --- ✅ СОТРУДНИКИ (миграция v5) ---
             Persons = new ObservableCollection<Person>(_databaseService.GetAllPersons());
@@ -97,7 +102,7 @@ namespace MetalCalcWPF.ViewModels
 
         // --- ✅ ЦЕХА (миграция v5) ---
         public ObservableCollection<Workshop> Workshops { get; }
-        public List<WorkshopKind> AllWorkshopKinds { get; }
+        public List<WorkshopKindChoice> AllWorkshopKindChoices { get; }
 
         // --- ✅ СОТРУДНИКИ (миграция v5) ---
         public ObservableCollection<Person> Persons { get; }

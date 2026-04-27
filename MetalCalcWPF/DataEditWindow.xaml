@@ -264,10 +264,23 @@
                               RowHeight="28">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="280"/>
-                            <DataGridComboBoxColumn Header="Тип"
-                                                    SelectedItemBinding="{Binding Kind}"
-                                                    ItemsSource="{Binding Source={StaticResource WorkshopKindValues}}"
-                                                    Width="130"/>
+                            <!-- Тип цеха: ComboBox с русскими ярлыками (Цех / Внешний клиент).
+                                 DataGridTemplateColumn используется потому что
+                                 DataGridComboBoxColumn не наследует DataContext родителя
+                                 и ItemsSource не находит коллекцию ViewModel. -->
+                            <DataGridTemplateColumn Header="Тип" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.AllWorkshopKindChoices, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  SelectedValue="{Binding Kind, UpdateSourceTrigger=PropertyChanged}"
+                                                  SelectedValuePath="Value"
+                                                  DisplayMemberPath="Label"
+                                                  BorderThickness="0"
+                                                  Background="Transparent"
+                                                  VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
                             <DataGridTextColumn Header="Примечание" Binding="{Binding Notes}" Width="*"/>
                         </DataGrid.Columns>
@@ -304,12 +317,24 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="220"/>
                             <DataGridTextColumn Header="Должность" Binding="{Binding Position}" Width="160"/>
-                            <DataGridComboBoxColumn Header="Цех"
-                                                    SelectedValueBinding="{Binding WorkshopId}"
-                                                    SelectedValuePath="Id"
-                                                    DisplayMemberPath="Name"
-                                                    ItemsSource="{Binding DataContext.Workshops, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    Width="220"/>
+                            <!-- Цех приписки сотрудника: DataGridTemplateColumn вместо
+                                 DataGridComboBoxColumn — последний не подхватывает
+                                 ItemsSource через RelativeSource Window и список оказывается
+                                 пустым. CellTemplate всегда показывает ComboBox, можно сразу
+                                 выбирать цех без двойного клика. -->
+                            <DataGridTemplateColumn Header="Цех" Width="280">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.Workshops, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  SelectedValue="{Binding WorkshopId, UpdateSourceTrigger=PropertyChanged}"
+                                                  SelectedValuePath="Id"
+                                                  DisplayMemberPath="Name"
+                                                  BorderThickness="0"
+                                                  Background="Transparent"
+                                                  VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridCheckBoxColumn Header="Заявитель" Binding="{Binding CanSubmit}" Width="80"/>
                             <DataGridCheckBoxColumn Header="Приёмщик" Binding="{Binding CanAccept}" Width="80"/>
                             <DataGridCheckBoxColumn Header="Акт." Binding="{Binding IsActive}" Width="45"/>
