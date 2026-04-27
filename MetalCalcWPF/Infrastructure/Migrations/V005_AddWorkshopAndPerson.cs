@@ -56,17 +56,15 @@ CREATE TABLE IF NOT EXISTS ""Person"" (
             if (ctx.Workshops.AsNoTracking().Any())
                 return;
 
+            // Notes у сидов оставляем пустыми — это пользовательское поле для заметок
+            // (контактное лицо, договор, особенности). Технические следы здесь —
+            // визуальный шум для конечного пользователя редактора БД.
             ctx.Workshops.AddRange(
-                new Workshop { Name = "Цех СВ",                                Kind = WorkshopKind.Internal, IsActive = true,
-                               Notes = "Создан миграцией v5." },
-                new Workshop { Name = "Цех СК (столбы ЖБИ)",                    Kind = WorkshopKind.Internal, IsActive = true,
-                               Notes = "Создан миграцией v5." },
-                new Workshop { Name = "Цех ХЭСС (брусчатка и бордюры)",         Kind = WorkshopKind.Internal, IsActive = true,
-                               Notes = "Создан миграцией v5." },
-                new Workshop { Name = "Цех сэндвич-панелей",                    Kind = WorkshopKind.Internal, IsActive = true,
-                               Notes = "Создан миграцией v5." },
-                new Workshop { Name = "Цех металлообработки",                   Kind = WorkshopKind.Internal, IsActive = true,
-                               Notes = "Наш цех. Создан миграцией v5." }
+                new Workshop { Name = "Цех СВ",                          Kind = WorkshopKind.Internal, IsActive = true, Notes = "" },
+                new Workshop { Name = "Цех СК (столбы ЖБИ)",              Kind = WorkshopKind.Internal, IsActive = true, Notes = "" },
+                new Workshop { Name = "Цех ХЭСС (брусчатка и бордюры)",   Kind = WorkshopKind.Internal, IsActive = true, Notes = "" },
+                new Workshop { Name = "Цех сэндвич-панелей",              Kind = WorkshopKind.Internal, IsActive = true, Notes = "" },
+                new Workshop { Name = "Цех металлообработки",             Kind = WorkshopKind.Internal, IsActive = true, Notes = "Наш цех" }
             );
             ctx.SaveChanges();
         }
